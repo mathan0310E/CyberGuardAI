@@ -15,6 +15,14 @@ import {
   FileText,
   Clock,
   Settings,
+  Radar,
+  Eye,
+  Brain,
+  Network,
+  ShieldCheck,
+  Bug,
+  Siren,
+  CircleHelp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -22,14 +30,24 @@ import { useAuth } from "@/lib/auth-context";
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/scanner", label: "Scanner", icon: Scan },
-  { href: "/chat", label: "AI Chat", icon: MessageSquare },
+  { href: "/scanner", label: "URL Scanner", icon: Scan },
+  { href: "/chat", label: "AI Assistant", icon: MessageSquare },
   { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/history", label: "History", icon: Clock },
+  { href: "/history", label: "Scan History", icon: Clock },
+];
+
+const SECURITY_LINKS = [
+  { href: "/threat-intel", label: "Threat Intelligence", icon: Radar },
+  { href: "/monitoring", label: "Live Monitoring", icon: Eye },
+  { href: "/detection", label: "AI Detection", icon: Brain },
+  { href: "/network", label: "Network Security", icon: Network },
+  { href: "/vulnerability", label: "Vulnerability Scanner", icon: Bug },
+  { href: "/incident", label: "Incident Response", icon: Siren },
 ];
 
 const BOTTOM_LINKS = [
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/support", label: "Support", icon: CircleHelp },
 ];
 
 export function Sidebar() {
@@ -42,12 +60,31 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
+  const NavItem = ({ href, label, icon: Icon, onClick }: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; onClick?: () => void }) => {
+    const active = isActive(href);
+    return (
+      <Link
+        href={href}
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          active
+            ? "bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px_rgba(0,229,255,0.1)]"
+            : "text-muted hover:bg-surface hover:text-text hover:border-transparent"
+        )}
+      >
+        <Icon className={cn("h-4 w-4 shrink-0", active && "drop-shadow-[0_0_6px_rgba(0,229,255,0.5)]")} />
+        {label}
+      </Link>
+    );
+  };
+
   const sidebarContent = (
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-border/50">
         <Link href="/" className="flex items-center gap-2.5 group" onClick={() => setMobileOpen(false)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 ring-1 ring-primary/30 transition-all group-hover:bg-primary/30 group-hover:shadow-[0_0_15px_rgba(124,58,237,0.3)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 ring-1 ring-primary/30 transition-all group-hover:from-primary/30 group-hover:to-accent/30 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.3)]">
             <Shield className="h-5 w-5 text-primary" />
           </div>
           <span className="text-lg font-bold text-gradient">
@@ -58,64 +95,30 @@ export function Sidebar() {
 
       {/* Nav Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {NAV_LINKS.map((link) => {
-          const Icon = link.icon;
-          const active = isActive(link.href);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                active
-                  ? "bg-primary/15 text-primary ring-1 ring-primary/20"
-                  : "text-muted hover:bg-surface hover:text-text"
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {link.label}
-            </Link>
-          );
-        })}
+        {NAV_LINKS.map((link) => (
+          <NavItem key={link.href} {...link} onClick={() => setMobileOpen(false)} />
+        ))}
+
+        {/* Security Section */}
+        <div className="!mt-4 pt-4 border-t border-border/50">
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted/60">Security Center</p>
+          <div className="space-y-1">
+            {SECURITY_LINKS.map((link) => (
+              <NavItem key={link.href} {...link} onClick={() => setMobileOpen(false)} />
+            ))}
+          </div>
+        </div>
 
         {isAdmin && (
-          <Link
-            href="/admin"
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-              isActive("/admin")
-                ? "bg-primary/15 text-primary ring-1 ring-primary/20"
-                : "text-primary/80 hover:bg-primary/10 hover:text-primary"
-            )}
-          >
-            <Shield className="h-4 w-4 shrink-0" />
-            Admin
-          </Link>
+          <div className="!mt-4 pt-4 border-t border-border/50">
+            <NavItem href="/admin" label="Admin Panel" icon={ShieldCheck} onClick={() => setMobileOpen(false)} />
+          </div>
         )}
 
         <div className="!mt-4 pt-4 border-t border-border/50 space-y-1">
-          {BOTTOM_LINKS.map((link) => {
-            const Icon = link.icon;
-            const active = isActive(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                  active
-                    ? "bg-primary/15 text-primary ring-1 ring-primary/20"
-                    : "text-muted hover:bg-surface hover:text-text"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {link.label}
-              </Link>
-            );
-          })}
+          {BOTTOM_LINKS.map((link) => (
+            <NavItem key={link.href} {...link} onClick={() => setMobileOpen(false)} />
+          ))}
         </div>
       </nav>
 
@@ -129,7 +132,7 @@ export function Sidebar() {
             </div>
             <button
               onClick={() => { logout(); setMobileOpen(false); }}
-              className="shrink-0 p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+              className="shrink-0 p-2 rounded-xl text-muted hover:text-danger hover:bg-danger/10 transition-colors"
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
@@ -140,14 +143,14 @@ export function Sidebar() {
             <Link
               href="/auth/login"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted hover:text-text hover:border-primary/30 transition-all"
+              className="flex items-center justify-center rounded-xl border border-primary/20 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-all"
             >
               Sign In
             </Link>
             <Link
               href="/auth/register"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition-all hover:bg-primary-light"
+              className="flex items-center justify-center rounded-xl bg-gradient-to-r from-primary to-[#00B4D8] px-3 py-2 text-sm font-semibold text-[#07090D] transition-all hover:shadow-[0_0_20px_rgba(0,229,255,0.4)]"
             >
               Get Started
             </Link>
@@ -170,7 +173,7 @@ export function Sidebar() {
       <div className="md:hidden fixed top-0 inset-x-0 z-50 glass-strong border-b border-border/50">
         <div className="flex items-center justify-between h-14 px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 ring-1 ring-primary/30">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 ring-1 ring-primary/30">
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <span className="text-base font-bold text-gradient">
@@ -190,12 +193,10 @@ export function Sidebar() {
       {/* Mobile Overlay Sidebar */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-[60]">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          {/* Sidebar Panel */}
           <div className="absolute inset-y-0 left-0 w-72 glass-strong border-r border-border/50 animate-in slide-in-from-left duration-200">
             <button
               className="absolute top-4 right-4 p-2 text-muted hover:text-text transition-colors"

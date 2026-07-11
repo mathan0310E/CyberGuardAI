@@ -18,7 +18,7 @@ export function ProgressTimeline({ steps, className }: ProgressTimelineProps) {
           step.status === "completed"
             ? RISK_COLORS.safe
             : step.status === "active"
-            ? "#7C3AED"
+            ? "#00E5FF"
             : "#334155";
 
         return (
@@ -29,7 +29,7 @@ export function ProgressTimeline({ steps, className }: ProgressTimelineProps) {
                 style={{ borderColor: color, backgroundColor: step.status === "completed" ? color : "transparent" }}
               >
                 {step.status === "completed" && (
-                  <Check className="h-3.5 w-3.5 text-white" />
+                  <Check className="h-3.5 w-3.5 text-[#07090D]" />
                 )}
                 {step.status === "active" && (
                   <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
@@ -41,7 +41,7 @@ export function ProgressTimeline({ steps, className }: ProgressTimelineProps) {
               {!isLast && (
                 <div
                   className="w-0.5 h-6 mt-1 transition-colors"
-                  style={{ backgroundColor: step.status === "completed" ? color : "#1E293B" }}
+                  style={{ backgroundColor: step.status === "completed" ? color : "#1F2937" }}
                 />
               )}
             </div>

@@ -7,9 +7,9 @@ import { CyberGrid } from "@/components/effects/CyberGrid";
 import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
-  title: "CyberGuard AI — AI-Powered Website Threat Scanner",
+  title: "CyberGuard AI — AI-Powered Cybersecurity Platform",
   description:
-    "Production-quality defensive AI platform for detecting malware, phishing, and security threats on websites. Scan any URL for hidden threats.",
+    "Enterprise-grade AI platform for detecting malware, phishing, and security threats. Real-time threat intelligence, vulnerability scanning, and automated incident response.",
 };
 
 export default function RootLayout({
@@ -30,9 +30,10 @@ export default function RootLayout({
             position="bottom-right"
             toastOptions={{
               style: {
-                background: "#111827",
-                border: "1px solid #1E293B",
+                background: "#0B1120",
+                border: "1px solid rgba(0,229,255,0.15)",
                 color: "#F8FAFC",
+                boxShadow: "0 0 20px rgba(0,229,255,0.1)",
               },
             }}
           />

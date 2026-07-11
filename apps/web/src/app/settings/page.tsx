@@ -40,7 +40,7 @@ export default function SettingsPage() {
               className={cn(
                 "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all text-left w-full",
                 activeSection === section.id
-                  ? "bg-primary/10 text-primary border border-primary/30"
+                  ? "bg-primary/10 text-primary border border-primary/20"
                   : "text-muted hover:text-text hover:bg-surface"
               )}
             >

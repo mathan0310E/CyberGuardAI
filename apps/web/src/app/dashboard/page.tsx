@@ -40,7 +40,7 @@ const fadeInUp = {
   }),
 };
 
-const PIE_COLORS = ["#7C3AED", "#A855F7", "#38BDF8", "#F59E0B", "#EF4444", "#22C55E"];
+const PIE_COLORS = ["#00E5FF", "#7C3AED", "#3B82F6", "#F59E0B", "#EF4444", "#22C55E"];
 
 interface DashboardData {
   totalScans: number;
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 12 }} axisLine={{ stroke: "#1E293B" }} />
                 <YAxis tick={{ fill: "#94A3B8", fontSize: 12 }} axisLine={{ stroke: "#1E293B" }} />
                 <Tooltip contentStyle={{ backgroundColor: "#111827", border: "1px solid #1E293B", borderRadius: "0.75rem", color: "#F8FAFC" }} />
-                <Bar dataKey="value" fill="#7C3AED" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="value" fill="#00E5FF" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </GlassCard>

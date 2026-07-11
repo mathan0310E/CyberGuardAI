@@ -20,7 +20,6 @@ import {
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { WorkflowTimeline } from "@/components/ui/WorkflowTimeline";
-import { StatsCard } from "@/components/ui/StatsCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useAuth } from "@/lib/auth-context";
@@ -66,7 +65,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="relative z-10"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary mb-6 backdrop-blur-sm">
             <Zap className="h-3 w-3" />
             AI-Powered Threat Detection
           </div>
@@ -76,8 +75,8 @@ export default function LandingPage() {
             <span className="text-gradient">Protect Websites.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">
-            CyberGuard AI scans any website for malware, phishing, and security threats
-            using advanced AI analysis, computer vision, and threat intelligence correlation.
+            Enterprise-grade AI cybersecurity platform for detecting malware, phishing, and security threats
+            using advanced AI analysis, computer vision, and real-time threat intelligence.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 justify-center">
             <Link href={isAuthenticated ? "/scanner" : "/auth/register"}>
@@ -94,22 +93,6 @@ export default function LandingPage() {
           </div>
         </motion.div>
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
-      </section>
-
-      {/* Stats */}
-      <section className="px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="mx-auto max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Scans Performed", value: "12,847", icon: <Scan className="h-5 w-5" /> },
-            { label: "Threats Detected", value: "3,291", icon: <Shield className="h-5 w-5" /> },
-            { label: "Sites Cleaned", value: "9,556", icon: <Lock className="h-5 w-5" /> },
-            { label: "Reports Generated", value: "8,124", icon: <FileText className="h-5 w-5" /> },
-          ].map((stat, i) => (
-            <motion.div key={stat.label} custom={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}>
-              <StatsCard {...stat} />
-            </motion.div>
-          ))}
-        </div>
       </section>
 
       {/* Features */}
@@ -173,29 +156,29 @@ export default function LandingPage() {
                 <Shield className="h-5 w-5 text-primary" />
                 <span className="font-bold text-gradient">CyberGuardAI</span>
               </div>
-              <p className="text-sm text-muted">AI-Powered Website Security Analysis Platform. Defensive security tools for modern businesses.</p>
+              <p className="text-sm text-muted">Enterprise-grade AI cybersecurity platform. Defensive security analysis for modern businesses.</p>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-text mb-3">Product</h4>
               <div className="space-y-2 text-sm text-muted">
-                <Link href="/scanner" className="block hover:text-text transition-colors">Scanner</Link>
-                <Link href="/reports" className="block hover:text-text transition-colors">Reports</Link>
-                <Link href="/chat" className="block hover:text-text transition-colors">AI Chat</Link>
-                <Link href="/history" className="block hover:text-text transition-colors">History</Link>
+                <Link href="/scanner" className="block hover:text-primary transition-colors">Scanner</Link>
+                <Link href="/reports" className="block hover:text-primary transition-colors">Reports</Link>
+                <Link href="/chat" className="block hover:text-primary transition-colors">AI Chat</Link>
+                <Link href="/history" className="block hover:text-primary transition-colors">History</Link>
               </div>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-text mb-3">Company</h4>
               <div className="space-y-2 text-sm text-muted">
-                <Link href="/about" className="block hover:text-text transition-colors">About</Link>
-                <Link href="/dashboard" className="block hover:text-text transition-colors">Dashboard</Link>
+                <Link href="/about" className="block hover:text-primary transition-colors">About</Link>
+                <Link href="/dashboard" className="block hover:text-primary transition-colors">Dashboard</Link>
               </div>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-text mb-3">Legal</h4>
               <div className="space-y-2 text-sm text-muted">
-                <Link href="/privacy" className="block hover:text-text transition-colors">Privacy Policy</Link>
-                <Link href="/terms" className="block hover:text-text transition-colors">Terms & Conditions</Link>
+                <Link href="/privacy" className="block hover:text-primary transition-colors">Privacy Policy</Link>
+                <Link href="/terms" className="block hover:text-primary transition-colors">Terms & Conditions</Link>
               </div>
             </div>
           </div>

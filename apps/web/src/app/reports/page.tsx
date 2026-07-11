@@ -113,7 +113,7 @@ export default function ReportsPage() {
               className={cn(
                 "rounded-lg px-3 py-2 text-xs font-medium transition-all",
                 filterLevel === level
-                  ? "bg-primary text-white"
+                  ? "bg-gradient-to-r from-primary to-[#00B4D8] text-[#07090D] font-semibold"
                   : "bg-surface border border-border text-muted hover:text-text hover:border-primary/30"
               )}
             >

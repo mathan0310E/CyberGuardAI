@@ -44,7 +44,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/20 ring-1 ring-primary/30 mb-4">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 ring-1 ring-primary/30 mb-4">
             <Shield className="h-8 w-8 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-text">Welcome Back</h1>
@@ -90,7 +90,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <GlowButton type="submit" className="w-full" disabled={isLoading}>
+            <GlowButton type="submit" className="w-full bg-gradient-to-r from-primary to-[#00B4D8] text-[#07090D] font-semibold hover:shadow-[0_0_30px_rgba(0,229,255,0.5)] hover:from-primary-light hover:to-[#33EBFF]" disabled={isLoading}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
             </GlowButton>
           </form>

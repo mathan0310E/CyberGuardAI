@@ -144,7 +144,7 @@ function ChatContent() {
               className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "justify-start")}
             >
               {msg.role === "assistant" && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary mt-1">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-1">
                   <Bot className="h-4 w-4" />
                 </div>
               )}
@@ -152,7 +152,7 @@ function ChatContent() {
                 className={cn(
                   "group relative max-w-[80%] rounded-2xl px-4 py-3 text-sm",
                   msg.role === "user"
-                    ? "bg-primary text-white rounded-br-md"
+                    ? "bg-gradient-to-r from-primary to-[#00B4D8] text-[#07090D] rounded-br-md"
                     : "glass rounded-bl-md"
                 )}
               >
@@ -184,7 +184,7 @@ function ChatContent() {
 
         {isTyping && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Bot className="h-4 w-4" />
             </div>
             <div className="glass rounded-2xl rounded-bl-md px-4 py-3">

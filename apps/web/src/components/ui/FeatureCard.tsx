@@ -19,7 +19,7 @@ export function FeatureCard({ icon, title, description, className }: FeatureCard
         className
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:shadow-[0_0_15px_rgba(124,58,237,0.3)]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.3)]">
         {icon}
       </div>
       <h3 className="mt-4 text-lg font-semibold text-text">{title}</h3>

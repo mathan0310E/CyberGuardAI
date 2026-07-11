@@ -17,7 +17,7 @@ export function SectionTitle({
 }: SectionTitleProps) {
   return (
     <div className={cn(align === "center" && "text-center", className)}>
-      <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient-warm">
+      <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient">
         {title}
       </h2>
       {subtitle && (

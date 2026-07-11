@@ -23,7 +23,7 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        "rounded-2xl glass p-5 transition-all duration-300 hover:glow-border",
+        "rounded-2xl glass p-5 transition-all duration-300 hover:glow-border group",
         className
       )}
     >
@@ -42,7 +42,7 @@ export function StatsCard({
             </p>
           )}
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:shadow-[0_0_15px_rgba(0,229,255,0.3)]">
           {icon}
         </div>
       </div>
