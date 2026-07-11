@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "incremental": false,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "paths": {
+      "@cyberguard/types": ["../../packages/types/src"],
+      "@cyberguard/shared": ["../../packages/shared/src"]
+    }
+  },
+  "include": ["src", "../../packages/types/src", "../../packages/shared/src"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,107 @@
+import { Router, type Request, type Response } from "express";
+import { scanRequestSchema } from "../middleware/validation.js";
+import { store } from "../store.js";
+
+export const scanRoutes = Router();
+
+scanRoutes.get("/", async (_req: Request, res: Response) => {
+  const page = Math.max(1, Number(_req.query["page"]) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(_req.query["pageSize"]) || 20));
+  const total = store.scans.length;
+  const start = (page - 1) * pageSize;
+  const data = store.scans.slice(start, start + pageSize);
+
+  res.json({
+    success: true,
+    data,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+scanRoutes.get("/:id", async (req: Request, res: Response) => {
+  const scan = store.scans.find((s) => s._id === req.params["id"]);
+  if (!scan) {
+    res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
+    return;
+  }
+  res.json({ success: true, data: scan, error: null, timestamp: new Date().toISOString() });
+});
+
+scanRoutes.post("/", async (req: Request, res: Response) => {
+  const parsed = scanRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, data: null, error: parsed.error.issues[0]?.message ?? "Invalid request", timestamp: new Date().toISOString() });
+    return;
+  }
+
+  const { url, options } = parsed.data;
+  const domain = new URL(url).hostname;
+  const now = new Date();
+
+  const scan = {
+    _id: store.getNextScanId(),
+    url,
+    domain,
+    status: "pending" as const,
+    riskScore: 0,
+    riskLevel: "safe" as const,
+    scanOptions: options ?? {},
+    htmlAnalysis: null,
+    jsAnalysis: null,
+    screenshot: null,
+    ocrResults: null,
+    cvAnalysis: null,
+    threatIntel: [],
+    technologies: [],
+    malwareIndicators: [],
+    aiAnalysis: null,
+    reportId: null,
+    startedAt: now,
+    completedAt: null,
+    duration: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  store.scans.unshift(scan);
+
+  // Simulate scan completion after short delay
+  setTimeout(() => {
+    scan.status = "completed";
+    scan.riskScore = Math.floor(Math.random() * 80) + 5;
+    scan.riskLevel = scan.riskScore >= 80 ? "critical" : scan.riskScore >= 60 ? "high" : scan.riskScore >= 40 ? "medium" : scan.riskScore >= 20 ? "low" : "safe";
+    scan.completedAt = new Date();
+    scan.duration = Math.round((Date.now() - scan.startedAt.getTime()) / 1000);
+    scan.aiAnalysis = {
+      riskScore: scan.riskScore,
+      riskLevel: scan.riskLevel,
+      executiveSummary: `Analysis of ${domain} completed with a risk score of ${scan.riskScore}/100.`,
+      threatExplanation: "Automated analysis completed.",
+      recommendations: ["Implement CSP headers", "Review external scripts"],
+      detailedBreakdown: "",
+      complianceIssues: [],
+    };
+    scan.updatedAt = new Date();
+  }, 5000);
+
+  res.status(201).json({
+    success: true,
+    data: scan,
+    error: null,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+scanRoutes.delete("/:id", async (req: Request, res: Response) => {
+  const idx = store.scans.findIndex((s) => s._id === req.params["id"]);
+  if (idx === -1) {
+    res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
+    return;
+  }
+  store.scans.splice(idx, 1);
+  res.json({ success: true, data: { deleted: true }, error: null, timestamp: new Date().toISOString() });
+});
