@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -59,29 +59,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!auth) {
       setIsLoading(false);
       return;
     }
+
+    api.setTokenProvider(async () => {
+      const currentUser = auth?.currentUser;
+      if (currentUser) {
+        return currentUser.getIdToken(true);
+      }
+      return null;
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (!mountedRef.current) return;
+
       if (fbUser) {
         setFirebaseUser(fbUser);
         try {
           const token = await fbUser.getIdToken();
           api.setToken(token);
           const userData = await api.getMe() as unknown as User;
-          setUser(userData);
+          if (mountedRef.current) setUser(userData);
         } catch {
-          setUser(null);
+          try {
+            await api.syncFirebaseUser();
+            const userData = await api.getMe() as unknown as User;
+            if (mountedRef.current) setUser(userData);
+          } catch {
+            if (mountedRef.current) setUser(null);
+          }
         }
       } else {
         setFirebaseUser(null);
         setUser(null);
         api.setToken(null);
       }
-      setIsLoading(false);
+      if (mountedRef.current) setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -137,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setFirebaseUser(null);
     api.setToken(null);
+    api.setTokenProvider(null);
   }, []);
 
   return (

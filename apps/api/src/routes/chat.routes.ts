@@ -1,11 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import { chatRequestSchema } from "../middleware/validation.js";
+import { asyncHandler } from "../middleware/async-handler.js";
 import { store } from "../store.js";
 import { buildScanContext } from "../services/ai-analyzer.js";
+import { logger } from "../utils/logger.js";
 
 export const chatRoutes = Router();
 
-chatRoutes.post("/", async (req: Request, res: Response) => {
+chatRoutes.post("/", asyncHandler(async (req: Request, res: Response) => {
   const parsed = chatRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -88,7 +90,7 @@ Always provide clear, actionable, professional security advice. Use markdown for
       });
       return;
     } catch (error) {
-      console.error("OpenRouter API error:", error);
+      logger.error("OpenRouter API error:", error);
     }
   }
 
@@ -113,7 +115,7 @@ Always provide clear, actionable, professional security advice. Use markdown for
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
 function generateStructuredResponse(message: string, scanId?: string): string {
   const lower = message.toLowerCase();

@@ -1,27 +1,46 @@
 import { API_BASE_URL, API_ENDPOINTS } from "@cyberguard/shared";
 import type { ApiResponse } from "@cyberguard/types";
 
+type TokenProvider = () => Promise<string | null>;
+
 class ApiClient {
-  private token: string | null = null;
+  private tokenProvider: TokenProvider | null = null;
+  private staticToken: string | null = null;
 
   constructor(_baseUrl: string) {
   }
 
+  setTokenProvider(provider: TokenProvider | null) {
+    this.tokenProvider = provider;
+  }
+
   setToken(token: string | null) {
-    this.token = token;
+    this.staticToken = token;
+  }
+
+  private async getAuthToken(): Promise<string | null> {
+    if (this.tokenProvider) {
+      try {
+        return await this.tokenProvider();
+      } catch {
+        return this.staticToken;
+      }
+    }
+    return this.staticToken;
   }
 
   private async request<T>(
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
+    const token = await this.getAuthToken();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...((options.headers as Record<string, string>) ?? {}),
     };
 
-    if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     const res = await fetch(url, { ...options, headers });

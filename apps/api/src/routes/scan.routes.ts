@@ -1,13 +1,22 @@
 import { Router, type Request, type Response } from "express";
+import rateLimit from "express-rate-limit";
 import { scanRequestSchema } from "../middleware/validation.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { asyncHandler } from "../middleware/async-handler.js";
 import { store, type MemoryScan } from "../store.js";
 import { runScanPipeline } from "../services/scan-orchestrator.js";
 import { sendTelegramAlert, generateEventId } from "../services/telegram.js";
+import { logger } from "../utils/logger.js";
 
 export const scanRoutes = Router();
 
-scanRoutes.get("/", async (_req: Request, res: Response) => {
+const scanLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { success: false, error: "Scan rate limit exceeded. Maximum 5 scans per minute." },
+});
+
+scanRoutes.get("/", asyncHandler(async (_req: Request, res: Response) => {
   const page = Math.max(1, Number(_req.query["page"]) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(_req.query["pageSize"]) || 20));
   const { data, total } = await store.listScans(page, pageSize);
@@ -21,18 +30,18 @@ scanRoutes.get("/", async (_req: Request, res: Response) => {
     totalPages: Math.ceil(total / pageSize),
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
-scanRoutes.get("/:id", async (req: Request, res: Response) => {
+scanRoutes.get("/:id", asyncHandler(async (req: Request, res: Response) => {
   const scan = await store.getScanById(req.params["id"] as string);
   if (!scan) {
     res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
     return;
   }
   res.json({ success: true, data: scan, error: null, timestamp: new Date().toISOString() });
-});
+}));
 
-scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
+scanRoutes.post("/", scanLimiter, requireAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
   const parsed = scanRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ success: false, data: null, error: parsed.error.issues[0]?.message ?? "Invalid request", timestamp: new Date().toISOString() });
@@ -80,11 +89,12 @@ scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   await store.addScan(scan);
   await store.addLog("info", `Scan started: ${url}`);
 
-  const updateStatus = (status: MemoryScan["status"]) => {
-    store.updateScan(scan._id, { status, updatedAt: new Date() }).catch(() => {});
-  };
-
-  runScanPipeline(scan, updateStatus).then(async (result) => {
+  // Fire-and-forget pipeline — catch all errors to prevent server crash
+  runScanPipeline(scan, (status) => {
+    store.updateScan(scan._id, { status, updatedAt: new Date() }).catch((e) => {
+      logger.error(`Failed to update scan status for ${scan._id}:`, e);
+    });
+  }).then(async (result) => {
     const completedAt = new Date();
     const duration = Math.round((Date.now() - scan.startedAt.getTime()) / 1000);
 
@@ -150,9 +160,9 @@ scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
-scanRoutes.delete("/:id", async (req: Request, res: Response) => {
+scanRoutes.delete("/:id", asyncHandler(async (req: Request, res: Response) => {
   const existing = await store.getScanById(req.params["id"] as string);
   if (!existing) {
     res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
@@ -160,4 +170,4 @@ scanRoutes.delete("/:id", async (req: Request, res: Response) => {
   }
   await store.deleteScan(req.params["id"] as string);
   res.json({ success: true, data: { deleted: true }, error: null, timestamp: new Date().toISOString() });
-});
+}));

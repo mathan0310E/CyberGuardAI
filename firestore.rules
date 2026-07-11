@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isUserDocOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ── Users ──
+    match /users/{userId} {
+      // Users can read/update their own profile
+      allow read: if isOwner(userId);
+      allow update: if isOwner(userId) && !request.resource.data.diff().affectedKeys().hasAny(['role', 'scanCount']);
+
+      // Admins can read all users and update status/role
+      allow read: if isAdmin();
+      allow update: if isAdmin() && request.resource.data.diff().affectedKeys().hasOnly(['status', 'role', 'updatedAt']);
+
+      // Only the sync endpoint (admin SDK) creates users
+      allow create: if false;
+      allow delete: if false;
+    }
+
+    // ── Scans ──
+    match /scans/{scanId} {
+      // Users can read their own scans
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      // Admins can read all scans
+      allow read: if isAdmin();
+
+      // Authenticated users can create scans (the API validates)
+      allow create: if isAuthenticated();
+
+      // Only the owning user or admins can delete scans
+      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+
+      // Updates allowed via admin SDK only (server-side)
+      allow update: if isAdmin();
+    }
+
+    // ── Reports ──
+    match /reports/{reportId} {
+      // Reports are tied to scans; check scan ownership
+      allow read: if isAuthenticated() &&
+        get(/databases/$(database)/documents/scans/$(resource.data.scanId)).data.userId == request.auth.uid;
+
+      allow read: if isAdmin();
+
+      // Server creates reports via admin SDK
+      allow create: if isAuthenticated();
+
+      // Only admins can delete reports
+      allow delete: if isAdmin();
+    }
+
+    // ── Logs ──
+    match /logs/{logId} {
+      // Only admins can read logs
+      allow read: if isAdmin();
+
+      // Only server creates logs via admin SDK
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Counters (internal) ──
+    match /counters/{counterId} {
+      // Server-only via admin SDK
+      allow read, write: if false;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

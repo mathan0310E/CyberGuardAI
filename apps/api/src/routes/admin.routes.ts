@@ -1,9 +1,11 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Response } from "express";
+import { requireAdmin, type AuthRequest } from "../middleware/auth.js";
+import { asyncHandler } from "../middleware/async-handler.js";
 import { store } from "../store.js";
 
 export const adminRoutes = Router();
 
-adminRoutes.get("/users", async (_req: Request, res: Response) => {
+adminRoutes.get("/users", requireAdmin, asyncHandler(async (_req: AuthRequest, res: Response) => {
   const allUsers = await store.listUsers();
   const users = allUsers.map((u) => ({
     _id: u._id,
@@ -18,9 +20,9 @@ adminRoutes.get("/users", async (_req: Request, res: Response) => {
   }));
 
   res.json({ success: true, data: users, error: null, timestamp: new Date().toISOString() });
-});
+}));
 
-adminRoutes.patch("/users/:id/status", async (req: Request, res: Response) => {
+adminRoutes.patch("/users/:id/status", requireAdmin, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { status } = req.body as { status: string };
   if (!["active", "suspended", "blocked", "pending_review"].includes(status)) {
     res.status(400).json({ success: false, data: null, error: "Invalid status", timestamp: new Date().toISOString() });
@@ -41,9 +43,9 @@ adminRoutes.patch("/users/:id/status", async (req: Request, res: Response) => {
   await store.addLog("info", `Admin updated user ${user.email} status to ${status}`);
 
   res.json({ success: true, data: { _id: user._id, status }, error: null, timestamp: new Date().toISOString() });
-});
+}));
 
-adminRoutes.get("/stats", async (_req: Request, res: Response) => {
+adminRoutes.get("/stats", requireAdmin, asyncHandler(async (_req: AuthRequest, res: Response) => {
   const allScans = await store.getAllScans();
   const totalScans = allScans.length;
   const completedScans = allScans.filter((s) => s.status === "completed").length;
@@ -59,9 +61,9 @@ adminRoutes.get("/stats", async (_req: Request, res: Response) => {
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
-adminRoutes.get("/logs", async (req: Request, res: Response) => {
+adminRoutes.get("/logs", requireAdmin, asyncHandler(async (req: AuthRequest, res: Response) => {
   const page = Math.max(1, Number(req.query["page"]) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(req.query["pageSize"]) || 50));
   const { data, total } = await store.listLogs(page, pageSize);
@@ -75,4 +77,4 @@ adminRoutes.get("/logs", async (req: Request, res: Response) => {
     totalPages: Math.ceil(total / pageSize),
     timestamp: new Date().toISOString(),
   });
-});
+}));

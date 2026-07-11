@@ -17,11 +17,21 @@ import {
   Radar,
   Eye,
   Brain,
-  Network,
   ShieldCheck,
-  Bug,
-  Siren,
   CircleHelp,
+  BarChart3,
+  Bell,
+  Users,
+  Globe,
+  Key,
+  Building2,
+  Target,
+  GitCompare,
+  Calendar,
+  Lightbulb,
+  Crown,
+  LineChart,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -35,12 +45,21 @@ const NAV_LINKS = [
 ];
 
 const SECURITY_LINKS = [
-  { href: "/threat-intel", label: "Threat Intelligence", icon: Radar },
+  { href: "/detection", label: "AI Security Center", icon: Brain },
   { href: "/monitoring", label: "Live Monitoring", icon: Eye },
-  { href: "/detection", label: "AI Detection", icon: Brain },
-  { href: "/network", label: "Network Security", icon: Network },
-  { href: "/vulnerability", label: "Vulnerability Scanner", icon: Bug },
-  { href: "/incident", label: "Incident Response", icon: Siren },
+  { href: "/threats", label: "Threat Dashboard", icon: Radar },
+  { href: "/soc", label: "SOC Dashboard", icon: ShieldCheck },
+  { href: "/timeline", label: "Score Timeline", icon: LineChart },
+  { href: "/compare", label: "Compare Sites", icon: GitCompare },
+];
+
+const BUSINESS_LINKS = [
+  { href: "/executive", label: "Executive View", icon: Briefcase },
+  { href: "/analytics", label: "Business Analytics", icon: BarChart3 },
+  { href: "/inventory", label: "Website Inventory", icon: Globe },
+  { href: "/teams", label: "Team Collaboration", icon: Users },
+  { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
+  { href: "/scan-comparison", label: "Scan Comparison", icon: Target },
 ];
 
 const BOTTOM_LINKS = [
@@ -97,13 +116,37 @@ export function Sidebar() {
           <NavItem key={link.href} {...link} onClick={() => setMobileOpen(false)} />
         ))}
 
-        {/* Security Section */}
+        {/* Security Center Section */}
         <div className="!mt-4 pt-4 border-t border-border/50">
           <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted/60">Security Center</p>
           <div className="space-y-1">
             {SECURITY_LINKS.map((link) => (
               <NavItem key={link.href} {...link} onClick={() => setMobileOpen(false)} />
             ))}
+          </div>
+        </div>
+
+        {/* Business Section */}
+        <div className="!mt-4 pt-4 border-t border-border/50">
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted/60 flex items-center gap-1.5">
+            Business <Crown className="h-3 w-3 text-amber-400" />
+          </p>
+          <div className="space-y-1">
+            {BUSINESS_LINKS.map((link) => (
+              <NavItem key={link.href} {...link} onClick={() => setMobileOpen(false)} />
+            ))}
+          </div>
+        </div>
+
+        {/* Premium Tools */}
+        <div className="!mt-4 pt-4 border-t border-border/50">
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted/60">Enterprise</p>
+          <div className="space-y-1">
+            <NavItem href="/teams" label="Team Collaboration" icon={Users} onClick={() => setMobileOpen(false)} />
+            <NavItem href="/organizations" label="Organization" icon={Building2} onClick={() => setMobileOpen(false)} />
+            <NavItem href="/scheduled-reports" label="Scheduled Reports" icon={Calendar} onClick={() => setMobileOpen(false)} />
+            <NavItem href="/api-keys" label="API Keys" icon={Key} onClick={() => setMobileOpen(false)} />
+            <NavItem href="/notifications" label="Notifications" icon={Bell} onClick={() => setMobileOpen(false)} />
           </div>
         </div>
 

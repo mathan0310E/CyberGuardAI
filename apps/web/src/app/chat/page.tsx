@@ -41,7 +41,7 @@ function ChatContent() {
       id: "welcome",
       role: "assistant",
       content: `Hello! I'm **CyberGuard AI Assistant**. I can help you understand scan results, explain threats, and provide remediation guidance.\n\n${scanId ? `I see you're asking about a specific scan. I'll use that context for my answers.` : "Ask me anything about website security, malware detection, or threat analysis."}`,
-      timestamp: new Date().toISOString(),
+      timestamp: "2026-01-11T12:00:00.000Z",
     },
   ]);
   const [input, setInput] = useState("");

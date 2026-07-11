@@ -1,16 +1,45 @@
+# Dependencies
 node_modules/
 dist/
 .next/
 out/
+
+# Environment files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+
+# Build artifacts
 *.tsbuildinfo
 .turbo/
+
+# Deployment
 .vercel/
+.firebase/
+
+# Coverage
 coverage/
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets & credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*serviceAccount*.json
+*credentials*.json
+*firebase-admin*.json
+secrets/

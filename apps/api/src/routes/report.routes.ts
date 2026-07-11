@@ -1,10 +1,13 @@
 import { Router, type Request, type Response } from "express";
+import { requireAuth } from "../middleware/auth.js";
+import { asyncHandler } from "../middleware/async-handler.js";
 import { store, type MemoryScan } from "../store.js";
 import { generatePDFReport } from "../services/pdf-generator.js";
+import { logger } from "../utils/logger.js";
 
 export const reportRoutes = Router();
 
-reportRoutes.get("/", async (_req: Request, res: Response) => {
+reportRoutes.get("/", asyncHandler(async (_req: Request, res: Response) => {
   const page = Math.max(1, Number(_req.query["page"]) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(_req.query["pageSize"]) || 20));
   const { data: allReports, total } = await store.listReports(page, pageSize);
@@ -31,18 +34,18 @@ reportRoutes.get("/", async (_req: Request, res: Response) => {
     totalPages: Math.ceil(total / pageSize),
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
-reportRoutes.get("/:id", async (req: Request, res: Response) => {
+reportRoutes.get("/:id", asyncHandler(async (req: Request, res: Response) => {
   const report = await store.getReportById(req.params["id"] as string);
   if (!report) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });
     return;
   }
   res.json({ success: true, data: report, error: null, timestamp: new Date().toISOString() });
-});
+}));
 
-reportRoutes.get("/:id/download", async (req: Request, res: Response) => {
+reportRoutes.get("/:id/download", asyncHandler(async (req: Request, res: Response) => {
   const report = await store.getReportById(req.params["id"] as string);
   if (!report) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });
@@ -55,18 +58,13 @@ reportRoutes.get("/:id/download", async (req: Request, res: Response) => {
     return;
   }
 
-  try {
-    const pdfBuffer = await generatePDFReport(scan);
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="CyberGuard-Report-${report.domain}-${report._id}.pdf"`);
-    res.send(pdfBuffer);
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "PDF generation failed";
-    res.status(500).json({ success: false, data: null, error: msg, timestamp: new Date().toISOString() });
-  }
-});
+  const pdfBuffer = await generatePDFReport(scan);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="CyberGuard-Report-${report.domain}-${report._id}.pdf"`);
+  res.send(pdfBuffer);
+}));
 
-reportRoutes.post("/", async (req: Request, res: Response) => {
+reportRoutes.post("/", requireAuth, asyncHandler(async (req: Request, res: Response) => {
   const { scanId } = req.body as { scanId?: string };
   if (!scanId) {
     res.status(400).json({ success: false, data: null, error: "scanId is required", timestamp: new Date().toISOString() });
@@ -109,7 +107,7 @@ reportRoutes.post("/", async (req: Request, res: Response) => {
     const pdfBuffer = await generatePDFReport(scan);
     report.pdfData = pdfBuffer;
   } catch (error) {
-    console.error("PDF generation failed:", error);
+    logger.error("PDF generation failed:", error);
   }
 
   await store.addReport(report);
@@ -123,9 +121,9 @@ reportRoutes.post("/", async (req: Request, res: Response) => {
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
-reportRoutes.delete("/:id", async (req: Request, res: Response) => {
+reportRoutes.delete("/:id", asyncHandler(async (req: Request, res: Response) => {
   const existing = await store.getReportById(req.params["id"] as string);
   if (!existing) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });
@@ -133,4 +131,4 @@ reportRoutes.delete("/:id", async (req: Request, res: Response) => {
   }
   await store.deleteReport(req.params["id"] as string);
   res.json({ success: true, data: { deleted: true }, error: null, timestamp: new Date().toISOString() });
-});
+}));

@@ -1,9 +1,10 @@
 import { Router, type Request, type Response } from "express";
+import { asyncHandler } from "../middleware/async-handler.js";
 import { store } from "../store.js";
 
 export const dashboardRoutes = Router();
 
-dashboardRoutes.get("/stats", async (_req: Request, res: Response) => {
+dashboardRoutes.get("/stats", asyncHandler(async (_req: Request, res: Response) => {
   const allScans = await store.getAllScans();
 
   const totalScans = allScans.length;
@@ -42,4 +43,4 @@ dashboardRoutes.get("/stats", async (_req: Request, res: Response) => {
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));

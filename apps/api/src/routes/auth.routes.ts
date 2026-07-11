@@ -4,8 +4,13 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getAdminAuth } from "../firebase.js";
+import { asyncHandler } from "../middleware/async-handler.js";
+import { logger } from "../utils/logger.js";
 
-const JWT_SECRET = process.env["JWT_SECRET"] ?? "cyberguard-dev-secret-change-in-production";
+const JWT_SECRET = process.env["JWT_SECRET"];
+if (!JWT_SECRET && !getAdminAuth()) {
+  logger.error("[SECURITY] FATAL: JWT_SECRET not set and Firebase not configured. Legacy auth disabled.");
+}
 
 const registerSchema = z.object({
   fullName: z.string().min(2).max(100),
@@ -29,13 +34,14 @@ const loginSchema = z.object({
 });
 
 function generateToken(userId: string): string {
+  if (!JWT_SECRET) throw new Error("JWT_SECRET not configured");
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
 }
 
 export const authRoutes = Router();
 
 // Firebase-aware sync endpoint: creates/updates user doc from Firebase Auth token
-authRoutes.post("/sync", async (req: Request, res: Response) => {
+authRoutes.post("/sync", asyncHandler(async (req: Request, res: Response) => {
   const adminAuth = getAdminAuth();
   if (!adminAuth) {
     res.status(500).json({ success: false, data: null, error: "Firebase not configured", timestamp: new Date().toISOString() });
@@ -116,13 +122,13 @@ authRoutes.post("/sync", async (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    console.error("Firebase sync error:", err);
+    logger.error("Firebase sync error:", err);
     res.status(401).json({ success: false, data: null, error: "Invalid Firebase token", timestamp: new Date().toISOString() });
   }
-});
+}));
 
 // Register (legacy JWT — kept for backward compatibility when Firebase is not configured)
-authRoutes.post("/register", async (req: Request, res: Response) => {
+authRoutes.post("/register", asyncHandler(async (req: Request, res: Response) => {
   const adminAuth = getAdminAuth();
   if (adminAuth) {
     res.status(400).json({ success: false, data: null, error: "Use Firebase Auth to register", timestamp: new Date().toISOString() });
@@ -187,10 +193,10 @@ authRoutes.post("/register", async (req: Request, res: Response) => {
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
 // Login (legacy JWT — kept for backward compatibility)
-authRoutes.post("/login", async (req: Request, res: Response) => {
+authRoutes.post("/login", asyncHandler(async (req: Request, res: Response) => {
   const adminAuth = getAdminAuth();
   if (adminAuth) {
     res.status(400).json({ success: false, data: null, error: "Use Firebase Auth to sign in", timestamp: new Date().toISOString() });
@@ -241,10 +247,10 @@ authRoutes.post("/login", async (req: Request, res: Response) => {
     error: null,
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
 // Get current user (supports both Firebase and legacy JWT)
-authRoutes.get("/me", async (req: Request, res: Response) => {
+authRoutes.get("/me", asyncHandler(async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
     res.status(401).json({ success: false, data: null, error: "Not authenticated", timestamp: new Date().toISOString() });
@@ -277,6 +283,10 @@ authRoutes.get("/me", async (req: Request, res: Response) => {
   }
 
   // Legacy JWT mode
+  if (!JWT_SECRET) {
+    res.status(500).json({ success: false, data: null, error: "Authentication not configured", timestamp: new Date().toISOString() });
+    return;
+  }
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     const user = await store.getUserById(decoded.userId);
@@ -295,4 +305,4 @@ authRoutes.get("/me", async (req: Request, res: Response) => {
   } catch {
     res.status(401).json({ success: false, data: null, error: "Invalid token", timestamp: new Date().toISOString() });
   }
-});
+}));

@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ── User uploads (screenshots, etc.) ──
+    match /users/{userId}/{allPaths=**} {
+      // Users can read/write their own folder
+      allow read, write: if isOwner(userId);
+
+      // Admins can read any user's folder
+      allow read: if isAdmin();
+    }
+
+    // ── Reports (admin-generated PDFs) ──
+    match /reports/{reportId}/{allPaths=**} {
+      // Authenticated users can read reports for their scans
+      allow read: if isAuthenticated();
+
+      // Only admin SDK writes reports
+      allow write: if false;
+    }
+
+    // ── Temp uploads ──
+    match /temp/{allPaths=**} {
+      // Authenticated users can read/write temp files
+      allow read, write: if isAuthenticated();
+
+      // Auto-delete after 24h (client sets TTL metadata)
+      allow delete: if isAuthenticated();
+    }
+
+    // Deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

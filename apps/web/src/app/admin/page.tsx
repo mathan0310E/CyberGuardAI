@@ -245,7 +245,7 @@ export default function AdminPage() {
                 )} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-text">{log.message}</p>
-                  <p className="text-xs text-muted">{new Date(log.timestamp).toLocaleString()}</p>
+                  <p className="text-xs text-muted">{new Date(log.timestamp).toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
                 <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
                   log.level === "error" ? "bg-danger/20 text-danger" : log.level === "warn" ? "bg-warning/20 text-warning" : "bg-success/20 text-success"

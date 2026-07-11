@@ -1,3 +1,5 @@
+import { logger } from "../utils/logger.js";
+
 interface TelegramAlert {
   eventType: string;
   severity: "info" | "warning" | "critical";
@@ -43,7 +45,7 @@ export async function sendTelegramAlert(alert: TelegramAlert): Promise<boolean> 
   const chatId = process.env["TELEGRAM_CHAT_ID"];
 
   if (!token || !chatId) {
-    console.log(`[TELEGRAM] Alert suppressed (no config): ${alert.eventType}`);
+    logger.info(`[TELEGRAM] Alert suppressed (no config): ${alert.eventType}`);
     return false;
   }
 
@@ -60,14 +62,14 @@ export async function sendTelegramAlert(alert: TelegramAlert): Promise<boolean> 
     });
 
     if (!res.ok) {
-      console.error(`[TELEGRAM] Failed to send alert: HTTP ${res.status}`);
+      logger.error(`[TELEGRAM] Failed to send alert: HTTP ${res.status}`);
       return false;
     }
 
-    console.log(`[TELEGRAM] Alert sent: ${alert.eventType} (${alert.severity})`);
+    logger.info(`[TELEGRAM] Alert sent: ${alert.eventType} (${alert.severity})`);
     return true;
   } catch (error) {
-    console.error(`[TELEGRAM] Error sending alert:`, error);
+    logger.error(`[TELEGRAM] Error sending alert:`, error);
     return false;
   }
 }

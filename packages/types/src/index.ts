@@ -300,3 +300,215 @@ export interface AIChatResponse {
   conversationId: string;
   suggestedFollowUps: string[];
 }
+
+// ─── Premium Feature Types ────────────────────────────────
+
+export type MonitoringFrequency = "hourly" | "6hours" | "daily" | "weekly" | "monthly";
+
+export interface MonitoringTarget {
+  id: string;
+  url: string;
+  domain: string;
+  frequency: MonitoringFrequency;
+  status: "active" | "paused" | "error";
+  lastCheck: string;
+  lastChange: string | null;
+  createdAt: string;
+  totalChecks: number;
+  changesDetected: number;
+  riskScore: number;
+  riskLevel: RiskLevel;
+}
+
+export interface MonitoringEvent {
+  id: string;
+  targetId: string;
+  type: "check_completed" | "change_detected" | "threat_found" | "status_change";
+  message: string;
+  riskScore: number;
+  previousRiskScore: number | null;
+  scanId: string;
+  timestamp: string;
+}
+
+export interface SecurityTimelineEntry {
+  date: string;
+  riskScore: number;
+  malwareCount: number;
+  threatCount: number;
+  improvements: number;
+  scanCount: number;
+}
+
+export type TeamRole = "owner" | "admin" | "analyst" | "developer" | "viewer";
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: TeamRole;
+  avatar: string;
+  status: "active" | "invited" | "disabled";
+  lastActive: string;
+  joinedAt: string;
+}
+
+export interface ScheduledReportConfig {
+  id: string;
+  name: string;
+  frequency: "daily" | "weekly" | "monthly";
+  delivery: "dashboard" | "email" | "download";
+  includeCharts: boolean;
+  includeRecommendations: boolean;
+  recipients: string[];
+  createdAt: string;
+  lastGenerated: string | null;
+  nextGeneration: string;
+  status: "active" | "paused";
+}
+
+export type RecommendationPriority = "critical" | "high" | "medium" | "low";
+
+export interface SecurityRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: RecommendationPriority;
+  category: string;
+  businessImpact: string;
+  suggestedFix: string;
+  estimatedEffort: string;
+  domain: string;
+  createdAt: string;
+  status: "open" | "in_progress" | "resolved" | "dismissed";
+}
+
+export interface WebsiteInventoryItem {
+  id: string;
+  name: string;
+  domain: string;
+  url: string;
+  status: "active" | "inactive" | "error";
+  lastScan: string;
+  riskScore: number;
+  riskLevel: RiskLevel;
+  monitoringActive: boolean;
+  scanCount: number;
+  threatCount: number;
+  tags: string[];
+  addedAt: string;
+}
+
+export interface ThreatDashboardData {
+  criticalThreats: number;
+  activeThreats: number;
+  recentDetections: number;
+  blockedUsers: number;
+  threatDistribution: Array<{ name: string; value: number }>;
+  riskHeatmap: Array<{ hour: string; day: string; value: number }>;
+  securityTrends: Array<{ date: string; threats: number; blocked: number }>;
+  recentEvents: Array<{
+    id: string;
+    type: string;
+    message: string;
+    severity: RiskLevel;
+    timestamp: string;
+  }>;
+}
+
+export interface ScanComparisonResult {
+  currentScan: ScanResult;
+  previousScan: ScanResult | null;
+  newIssues: Array<{ title: string; severity: RiskLevel; category: string }>;
+  resolvedIssues: Array<{ title: string; severity: RiskLevel; category: string }>;
+  scoreChange: number;
+  improvements: string[];
+  regressions: string[];
+}
+
+export interface ExecutiveDashboardData {
+  totalWebsites: number;
+  totalScans: number;
+  securityScore: number;
+  threatDistribution: Array<{ name: string; value: number }>;
+  activeMonitoring: number;
+  teamMembers: number;
+  revenue: number;
+  subscriptionStatus: string;
+  securityTrend: Array<{ date: string; score: number }>;
+  recentActivity: Array<{
+    id: string;
+    type: string;
+    message: string;
+    timestamp: string;
+  }>;
+}
+
+export interface APIKey {
+  id: string;
+  name: string;
+  key: string;
+  prefix: string;
+  createdAt: string;
+  lastUsed: string | null;
+  expiresAt: string | null;
+  status: "active" | "revoked" | "expired";
+  usageCount: number;
+  permissions: string[];
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  logo: string;
+  websiteCount: number;
+  memberCount: number;
+  subscription: "free" | "starter" | "professional" | "enterprise";
+  createdAt: string;
+  settings: {
+    defaultScanFrequency: MonitoringFrequency;
+    emailNotifications: boolean;
+    slackIntegration: boolean;
+    apiAccess: boolean;
+  };
+}
+
+export type NotificationType =
+  | "malware_alert"
+  | "scan_completed"
+  | "subscription_update"
+  | "system_announcement"
+  | "security_recommendation"
+  | "team_update";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  severity: RiskLevel;
+  read: boolean;
+  createdAt: string;
+  actionUrl?: string;
+}
+
+export interface SOCEvent {
+  id: string;
+  type: "intrusion_attempt" | "malware_detected" | "unauthorized_access" | "data_breach" | "system_anomaly";
+  severity: RiskLevel;
+  source: string;
+  description: string;
+  status: "active" | "investigating" | "resolved" | "blocked";
+  timestamp: string;
+  assignedTo?: string;
+}
+
+export interface BusinessAnalyticsData {
+  activeCustomers: number;
+  subscriptionPlans: Array<{ plan: string; count: number; revenue: number }>;
+  mrr: number;
+  arr: number;
+  customerGrowth: Array<{ month: string; customers: number; revenue: number }>;
+  planDistribution: Array<{ name: string; value: number }>;
+  revenueTrends: Array<{ month: string; revenue: number }>;
+}

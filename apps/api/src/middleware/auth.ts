@@ -45,7 +45,11 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   }
 
   // Fallback: legacy JWT mode (when Firebase not configured)
-  const JWT_SECRET = process.env["JWT_SECRET"] ?? "cyberguard-dev-secret-change-in-production";
+  const JWT_SECRET = process.env["JWT_SECRET"];
+  if (!JWT_SECRET) {
+    res.status(500).json({ success: false, data: null, error: "Authentication not configured", timestamp: new Date().toISOString() });
+    return;
+  }
   try {
     const jwt = (await import("jsonwebtoken")).default;
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
@@ -66,4 +70,20 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   } catch {
     res.status(401).json({ success: false, data: null, error: "Invalid token", timestamp: new Date().toISOString() });
   }
+}
+
+export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  await requireAuth(req, res, async () => {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, data: null, error: "Authentication required", timestamp: new Date().toISOString() });
+      return;
+    }
+    const user = await store.getUserById(userId);
+    if (!user || user.role !== "admin") {
+      res.status(403).json({ success: false, data: null, error: "Admin access required", timestamp: new Date().toISOString() });
+      return;
+    }
+    next();
+  });
 }

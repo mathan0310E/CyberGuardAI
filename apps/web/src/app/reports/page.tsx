@@ -162,7 +162,7 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {new Date(report.generatedAt).toLocaleDateString()}
+                      {new Date(report.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                     </span>
                     <span className="flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" />
