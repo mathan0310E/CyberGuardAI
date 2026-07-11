@@ -29,7 +29,7 @@ export default function RegisterPage() {
   });
 
   if (isAuthenticated) {
-    router.push("/dashboard");
+    router.push("/");
     return null;
   }
 
@@ -54,7 +54,7 @@ export default function RegisterPage() {
     try {
       await register(form);
       toast.success("Account created!", { description: "Welcome to CyberGuard AI." });
-      router.push("/dashboard");
+      router.push("/");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Registration failed";
       toast.error("Registration failed", { description: msg });
