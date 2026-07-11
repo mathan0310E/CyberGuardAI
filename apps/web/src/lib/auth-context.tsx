@@ -48,12 +48,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function requireAuthInstance(): NonNullable<typeof auth> {
+  if (!auth) {
+    throw new Error("Firebase is not configured. Set NEXT_PUBLIC_FIREBASE_API_KEY in .env.local");
+  }
+  return auth;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser);
@@ -77,7 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await signInWithEmailAndPassword(auth, email, password);
+    const authInstance = requireAuthInstance();
+    const result = await signInWithEmailAndPassword(authInstance, email, password);
     const token = await result.user.getIdToken();
     api.setToken(token);
 
@@ -85,7 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await api.getMe() as unknown as User;
       setUser(userData);
     } catch {
-      // User doesn't exist in backend yet — auto-create via sync endpoint
       await api.syncFirebaseUser();
       const userData = await api.getMe() as unknown as User;
       setUser(userData);
@@ -93,8 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
+    const authInstance = requireAuthInstance();
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(authInstance, provider);
     const token = await result.user.getIdToken();
     api.setToken(token);
 
@@ -109,7 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (data: Parameters<typeof api.register>[0]) => {
-    const result = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const authInstance = requireAuthInstance();
+    const result = await createUserWithEmailAndPassword(authInstance, data.email, data.password);
     const token = await result.user.getIdToken();
     api.setToken(token);
 
@@ -119,7 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await signOut(auth);
+    const authInstance = requireAuthInstance();
+    await signOut(authInstance);
     setUser(null);
     setFirebaseUser(null);
     api.setToken(null);
