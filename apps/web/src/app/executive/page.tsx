@@ -85,7 +85,7 @@ const activityIcons: Record<string, React.ReactNode> = {
 
 export default function ExecutiveDashboardPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-6 py-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-center gap-3">
         <div>
           <div className="flex items-center gap-3">

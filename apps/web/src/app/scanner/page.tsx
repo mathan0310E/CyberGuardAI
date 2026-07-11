@@ -176,7 +176,7 @@ export default function ScannerPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 sm:px-5 lg:px-6 py-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-text">Website Scanner</h1>
         <p className="mt-1 text-muted">Enter a URL to analyze for malware and security threats</p>

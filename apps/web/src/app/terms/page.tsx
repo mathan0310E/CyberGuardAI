@@ -5,7 +5,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 
 export default function TermsPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16">
+    <div className="mx-auto max-w-3xl px-4 sm:px-5 lg:px-6 py-16">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-text mb-2">Terms & Conditions</h1>
         <p className="text-sm text-muted mb-8">Last updated: July 11, 2026</p>

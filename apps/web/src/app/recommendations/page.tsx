@@ -244,7 +244,7 @@ export default function RecommendationsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-6 py-8">
       <motion.div initial="hidden" animate="visible" variants={fadeInUp} custom={0}>
         <SectionTitle
           title="Security Recommendations"

@@ -120,7 +120,7 @@ function ChatContent() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col h-[calc(100vh-4rem)]">
+    <div className="mx-auto max-w-4xl px-4 sm:px-5 lg:px-6 py-8 flex flex-col h-[calc(100vh-4rem)]">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
         <h1 className="text-2xl font-bold text-text flex items-center gap-2">
           <Sparkles className="h-6 w-6 text-primary" />
