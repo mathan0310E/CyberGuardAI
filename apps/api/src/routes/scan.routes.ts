@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { scanRequestSchema } from "../middleware/validation.js";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { store, type MemoryScan } from "../store.js";
 import { runScanPipeline } from "../services/scan-orchestrator.js";
 import { sendTelegramAlert, generateEventId } from "../services/telegram.js";
@@ -33,7 +34,7 @@ scanRoutes.get("/:id", async (req: Request, res: Response) => {
   res.json({ success: true, data: scan, error: null, timestamp: new Date().toISOString() });
 });
 
-scanRoutes.post("/", async (req: Request, res: Response) => {
+scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   const parsed = scanRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ success: false, data: null, error: parsed.error.issues[0]?.message ?? "Invalid request", timestamp: new Date().toISOString() });
@@ -69,7 +70,7 @@ scanRoutes.post("/", async (req: Request, res: Response) => {
     malwareIndicators: [],
     aiAnalysis: null,
     reportId: null,
-    userId: null,
+    userId: req.userId ?? null,
     startedAt: now,
     completedAt: null,
     duration: null,

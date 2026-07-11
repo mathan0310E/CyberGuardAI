@@ -23,6 +23,7 @@ import { WorkflowTimeline } from "@/components/ui/WorkflowTimeline";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useAuth } from "@/lib/auth-context";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -52,22 +53,8 @@ const WORKFLOW_STEPS = [
   { number: 4, title: "Report", description: "Professional PDF with findings, charts, and recommendations", icon: <FileText className="h-6 w-6" /> },
 ];
 
-const TECH_STACK = [
-  { name: "Next.js 15", category: "Frontend" },
-  { name: "React 19", category: "Frontend" },
-  { name: "TypeScript", category: "Language" },
-  { name: "Tailwind CSS", category: "Styling" },
-  { name: "Framer Motion", category: "Animation" },
-  { name: "Playwright", category: "Analysis" },
-  { name: "Cheerio", category: "Analysis" },
-  { name: "OpenRouter AI", category: "AI" },
-  { name: "PDFKit", category: "Reports" },
-  { name: "MongoDB", category: "Database" },
-  { name: "Tesseract.js", category: "OCR" },
-  { name: "Transformers.js", category: "Vision" },
-];
-
 export default function LandingPage() {
+  const { isAuthenticated } = useAuth();
   return (
     <div className="overflow-hidden">
       {/* Hero */}
@@ -93,7 +80,7 @@ export default function LandingPage() {
             using advanced AI analysis, computer vision, and threat intelligence correlation.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <Link href="/scanner">
+            <Link href={isAuthenticated ? "/scanner" : "/auth/register"}>
               <GlowButton size="lg">
                 Start Scanning
                 <ArrowRight className="h-4 w-4" />
@@ -159,25 +146,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Tech Stack */}
-      <section className="px-4 sm:px-6 lg:px-8 py-20">
-        <div className="mx-auto max-w-5xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} custom={0}>
-            <SectionTitle title="Built With Modern Tech" subtitle="Enterprise-grade technology stack for reliable threat detection" />
-          </motion.div>
-          <div className="mt-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {TECH_STACK.map((tech, i) => (
-              <motion.div key={tech.name} custom={i + 1} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}>
-                <GlassCard className="text-center p-4 hover:glow-border transition-all cursor-default">
-                  <p className="text-sm font-semibold text-text">{tech.name}</p>
-                  <p className="mt-1 text-xs text-muted">{tech.category}</p>
-                </GlassCard>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="px-4 sm:px-6 lg:px-8 py-20">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} custom={0}>
@@ -185,7 +153,7 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold text-text">Ready to Secure Your Website?</h2>
             <p className="mt-4 text-muted">Get started with a comprehensive security scan in seconds.</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 justify-center">
-              <Link href="/scanner">
+              <Link href={isAuthenticated ? "/scanner" : "/auth/register"}>
                 <GlowButton size="lg">
                   Start Free Scan
                   <ArrowRight className="h-4 w-4" />

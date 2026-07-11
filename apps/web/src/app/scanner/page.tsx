@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -22,6 +23,7 @@ import { ThreatCard } from "@/components/ui/ThreatCard";
 import { ProgressTimeline } from "@/components/ui/ProgressTimeline";
 import { SCAN_STATUS_LABELS } from "@cyberguard/shared";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { ScanStatus, RiskLevel, MalwareIndicator } from "@cyberguard/types";
 import {
   BarChart,
@@ -60,6 +62,16 @@ interface ScanResult {
 }
 
 export default function ScannerPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast.error("Sign in required", { description: "Please sign in or register to use the scanner." });
+      router.push("/auth/login");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
   const [url, setUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
