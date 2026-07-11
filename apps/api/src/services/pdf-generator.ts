@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import type { IScan } from "../models/scan.model.js";
+import type { MemoryScan } from "../store.js";
 
 const COLORS = {
   primary: "#7C3AED",
@@ -13,7 +13,7 @@ const COLORS = {
   white: "#FFFFFF",
 };
 
-export async function generatePDFReport(scan: IScan): Promise<Buffer> {
+export async function generatePDFReport(scan: MemoryScan): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -63,6 +63,21 @@ export async function generatePDFReport(scan: IScan): Promise<Buffer> {
     doc.text(`Duration: ${scan.duration ? `${scan.duration}s` : "In progress"}`);
     doc.text(`Status: ${scan.status}`);
     doc.moveDown(2);
+
+    // Threat Intelligence
+    if (scan.threatIntel && scan.threatIntel.length > 0) {
+      doc.fontSize(18).fillColor(COLORS.primary).text("Threat Intelligence", 50);
+      doc.moveDown(0.5);
+      doc.fontSize(10).fillColor(COLORS.text);
+      for (const ti of scan.threatIntel) {
+        const tiData = ti as Record<string, unknown>;
+        const statusColor = tiData["status"] === "malicious" ? COLORS.danger :
+          tiData["status"] === "suspicious" ? COLORS.warning : COLORS.success;
+        doc.fontSize(10).fillColor(statusColor).text(`${tiData["source"]}: ${tiData["status"]} — ${tiData["details"]}`);
+        doc.moveDown(0.3);
+      }
+      doc.moveDown(1);
+    }
 
     // Malware Findings
     if (scan.malwareIndicators && scan.malwareIndicators.length > 0) {

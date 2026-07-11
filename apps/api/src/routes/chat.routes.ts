@@ -1,5 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { chatRequestSchema } from "../middleware/validation.js";
+import { store } from "../store.js";
+import { buildScanContext } from "../services/ai-analyzer.js";
 
 export const chatRoutes = Router();
 
@@ -15,12 +17,83 @@ chatRoutes.post("/", async (req: Request, res: Response) => {
     return;
   }
 
-  const { message, scanId, conversationId } = parsed.data;
-
-  // In production, this calls OpenRouter with structured scan data + user message
-  const responseContent = generateMockAIResponse(message, scanId);
+  const { message, scanId, conversationId, history } = parsed.data;
   const convId = conversationId ?? `conv-${Date.now()}`;
 
+  let scanContext = "";
+  if (scanId) {
+    const scan = store.scans.find((s) => s._id === scanId);
+    if (scan) {
+      scanContext = buildScanContext(scan as unknown as Record<string, unknown>);
+    }
+  }
+
+  const apiKey = process.env["OPENROUTER_API_KEY"];
+
+  if (apiKey && apiKey !== "sk-or-v1-your-key-here") {
+    try {
+      const systemPrompt = `You are CyberGuard AI, an expert cybersecurity assistant. You help users understand website security threats, malware detection, and remediation strategies. You are strictly defensive — never assist with offensive security, exploit creation, or unauthorized access.
+
+${scanContext ? `Scan context (structured data):\n${scanContext}` : "No specific scan data provided."}
+
+Always provide clear, actionable, professional security advice. Use markdown formatting for structured responses.`;
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...history.map((h) => ({ role: h.role, content: h.content })),
+        { role: "user" as const, content: message },
+      ];
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "openrouter/free",
+          messages,
+          max_tokens: 2048,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter API error: ${response.status}`);
+      }
+
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const content = data.choices?.[0]?.message?.content ?? "I couldn't generate a response. Please try again.";
+
+      store.addLog("info", `AI chat response generated (scan: ${scanId ?? "none"})`);
+
+      res.json({
+        success: true,
+        data: {
+          message: {
+            id: `msg-${Date.now()}`,
+            role: "assistant",
+            content,
+            timestamp: new Date().toISOString(),
+          },
+          conversationId: convId,
+          suggestedFollowUps: [
+            "Explain the risk score in more detail",
+            "What are the remediation steps?",
+            "Compare with previous scan results",
+          ],
+        },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    } catch (error) {
+      console.error("OpenRouter API error:", error);
+    }
+  }
+
+  // Fallback to structured mock response
+  const responseContent = generateStructuredResponse(message, scanId);
   res.json({
     success: true,
     data: {
@@ -42,7 +115,7 @@ chatRoutes.post("/", async (req: Request, res: Response) => {
   });
 });
 
-function generateMockAIResponse(message: string, scanId?: string): string {
+function generateStructuredResponse(message: string, scanId?: string): string {
   const lower = message.toLowerCase();
 
   if (lower.includes("phishing") || lower.includes("fake login")) {

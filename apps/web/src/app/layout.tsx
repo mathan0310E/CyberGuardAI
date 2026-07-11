@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { AnimatedBackground } from "@/components/effects/AnimatedBackground";
 import { CyberGrid } from "@/components/effects/CyberGrid";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "CyberGuard AI — AI-Powered Website Threat Scanner",
@@ -16,12 +18,25 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-background text-text antialiased">
-        <AnimatedBackground />
-        <CyberGrid />
-        <div className="relative z-10 flex min-h-screen flex-col">
-          <Navbar />
-          <main className="flex-1">{children}</main>
-        </div>
+        <AuthProvider>
+          <AnimatedBackground />
+          <CyberGrid />
+          <div className="relative z-10 flex min-h-screen">
+            <Sidebar />
+            <main className="flex-1 min-w-0 md:ml-60 pt-14 md:pt-0">{children}</main>
+          </div>
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: "#111827",
+                border: "1px solid #1E293B",
+                color: "#F8FAFC",
+              },
+            }}
+          />
+        </AuthProvider>
       </body>
     </html>
   );

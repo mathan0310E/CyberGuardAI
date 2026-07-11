@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -9,21 +10,17 @@ import {
   Scan,
   TrendingUp,
   ArrowRight,
-  Clock,
   FileText,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { RiskGauge } from "@/components/ui/RiskGauge";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { THREAT_CATEGORY_LABELS, RISK_COLORS } from "@cyberguard/shared";
-import {
-  MOCK_RECENT_SCANS,
-  MOCK_THREAT_FEED,
-  MOCK_RISK_CHART_DATA,
-  MOCK_THREAT_DISTRIBUTION,
-} from "@/lib/mock-data";
+import { api } from "@/lib/api";
+import type { RiskLevel } from "@cyberguard/types";
 import {
   BarChart,
   Bar,
@@ -32,9 +29,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 
 const fadeInUp = {
@@ -48,7 +42,66 @@ const fadeInUp = {
 
 const PIE_COLORS = ["#7C3AED", "#A855F7", "#38BDF8", "#F59E0B", "#EF4444", "#22C55E"];
 
+interface DashboardData {
+  totalScans: number;
+  completedScans: number;
+  malwareDetected: number;
+  cleanSites: number;
+  averageRiskScore: number;
+  recentScans: Array<{
+    _id: string;
+    url: string;
+    domain: string;
+    riskScore: number;
+    riskLevel: RiskLevel;
+    status: string;
+    malwareIndicators: unknown[];
+  }>;
+  threatDistribution: Array<{ category: string; count: number }>;
+  riskOverTime: Array<{ date: string; averageScore: number; scanCount: number }>;
+}
+
 export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getDashboardStats()
+      .then((stats) => setData(stats as unknown as DashboardData))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  const stats = data ?? {
+    totalScans: 0, completedScans: 0, malwareDetected: 0, cleanSites: 0,
+    averageRiskScore: 0, recentScans: [], threatDistribution: [], riskOverTime: [],
+  };
+
+  const avgRiskLevel: RiskLevel = stats.averageRiskScore >= 80 ? "critical" :
+    stats.averageRiskScore >= 60 ? "high" :
+    stats.averageRiskScore >= 40 ? "medium" :
+    stats.averageRiskScore >= 20 ? "low" : "safe";
+
+  const chartData = stats.riskOverTime.length > 0
+    ? stats.riskOverTime.map((e) => ({ name: e.date.slice(5), value: e.averageScore }))
+    : [
+        { name: "Mon", value: 0 }, { name: "Tue", value: 0 }, { name: "Wed", value: 0 },
+        { name: "Thu", value: 0 }, { name: "Fri", value: 0 }, { name: "Sat", value: 0 }, { name: "Sun", value: 0 },
+      ];
+
+  const threatChartData = stats.threatDistribution.map((t) => ({
+    name: THREAT_CATEGORY_LABELS[t.category as keyof typeof THREAT_CATEGORY_LABELS] ?? t.category,
+    value: t.count,
+  }));
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -59,10 +112,10 @@ export default function DashboardPage() {
       {/* Stats Row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {[
-          { label: "Total Scans", value: "12,847", icon: <Scan className="h-5 w-5" />, trend: "+12% this week", trendUp: true },
-          { label: "Threats Detected", value: "3,291", icon: <AlertTriangle className="h-5 w-5" />, trend: "+5% this week", trendUp: false },
-          { label: "Clean Sites", value: "9,556", icon: <CheckCircle className="h-5 w-5" />, trend: "+8% this week", trendUp: true },
-          { label: "Avg Risk Score", value: "24", icon: <TrendingUp className="h-5 w-5" />, trend: "-3% this week", trendUp: true },
+          { label: "Total Scans", value: stats.totalScans.toLocaleString(), icon: <Scan className="h-5 w-5" /> },
+          { label: "Threats Detected", value: stats.malwareDetected.toLocaleString(), icon: <AlertTriangle className="h-5 w-5" /> },
+          { label: "Clean Sites", value: stats.cleanSites.toLocaleString(), icon: <CheckCircle className="h-5 w-5" /> },
+          { label: "Avg Risk Score", value: stats.averageRiskScore.toString(), icon: <TrendingUp className="h-5 w-5" /> },
         ].map((stat, i) => (
           <motion.div key={stat.label} custom={i} initial="hidden" animate="visible" variants={fadeInUp}>
             <StatsCard {...stat} />
@@ -75,7 +128,7 @@ export default function DashboardPage() {
         <motion.div custom={4} initial="hidden" animate="visible" variants={fadeInUp}>
           <GlassCard glow className="flex flex-col items-center justify-center">
             <p className="text-sm font-medium text-muted mb-4">Overall Security Score</p>
-            <RiskGauge score={24} level="low" size="lg" />
+            <RiskGauge score={stats.averageRiskScore} level={avgRiskLevel} size="lg" />
             <div className="mt-6 grid grid-cols-2 gap-3 w-full">
               <Link href="/scanner">
                 <GlowButton variant="primary" className="w-full" size="sm">
@@ -104,9 +157,9 @@ export default function DashboardPage() {
         {/* Risk Trend Chart */}
         <motion.div custom={5} initial="hidden" animate="visible" variants={fadeInUp} className="lg:col-span-2">
           <GlassCard>
-            <h3 className="text-sm font-semibold text-muted mb-4">Risk Score Trend (Last 7 Days)</h3>
+            <h3 className="text-sm font-semibold text-muted mb-4">Risk Score Trend</h3>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={MOCK_RISK_CHART_DATA}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 12 }} axisLine={{ stroke: "#1E293B" }} />
                 <YAxis tick={{ fill: "#94A3B8", fontSize: 12 }} axisLine={{ stroke: "#1E293B" }} />
@@ -129,35 +182,39 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-3">
-              {MOCK_RECENT_SCANS.map((scan) => (
-                <Link
-                  key={scan.id}
-                  href={`/scanner?id=${scan.id}`}
-                  className="flex items-center justify-between rounded-xl border border-border p-3 transition-all hover:border-primary/30 hover:bg-surface/50"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: RISK_COLORS[scan.riskLevel] }}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-text truncate">{scan.domain}</p>
-                      <p className="text-xs text-muted">{scan.url}</p>
+              {stats.recentScans.length === 0 ? (
+                <p className="text-sm text-muted text-center py-8">No scans yet. Start your first scan!</p>
+              ) : (
+                stats.recentScans.map((scan) => (
+                  <Link
+                    key={scan._id}
+                    href={`/scanner`}
+                    className="flex items-center justify-between rounded-xl border border-border p-3 transition-all hover:border-primary/30 hover:bg-surface/50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: RISK_COLORS[scan.riskLevel] }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text truncate">{scan.domain}</p>
+                        <p className="text-xs text-muted truncate">{scan.url}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0">
-                    <span className="text-xs text-muted hidden sm:block">
-                      {scan.threatsFound} threat{scan.threatsFound !== 1 ? "s" : ""}
-                    </span>
-                    <span
-                      className="text-sm font-bold"
-                      style={{ color: RISK_COLORS[scan.riskLevel] }}
-                    >
-                      {scan.riskScore}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="text-xs text-muted hidden sm:block">
+                        {scan.malwareIndicators.length} threat{scan.malwareIndicators.length !== 1 ? "s" : ""}
+                      </span>
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: RISK_COLORS[scan.riskLevel] }}
+                      >
+                        {scan.riskScore}
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </GlassCard>
         </motion.div>
@@ -165,66 +222,25 @@ export default function DashboardPage() {
         {/* Threat Feed */}
         <motion.div custom={7} initial="hidden" animate="visible" variants={fadeInUp}>
           <GlassCard>
-            <h3 className="text-sm font-semibold text-muted mb-4">Live Threat Feed</h3>
-            <div className="space-y-3">
-              {MOCK_THREAT_FEED.map((threat) => (
-                <div key={threat.id} className="flex items-start gap-3">
-                  <div
-                    className="mt-1 h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: RISK_COLORS[threat.severity] }}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-text">
-                      {THREAT_CATEGORY_LABELS[threat.category]}
-                    </p>
-                    <p className="text-xs text-muted truncate">{threat.domain}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3 text-muted" />
-                      <span className="text-xs text-muted">{threat.time}</span>
+            <h3 className="text-sm font-semibold text-muted mb-4">Threat Distribution</h3>
+            {threatChartData.length === 0 ? (
+              <p className="text-sm text-muted text-center py-8">No threats detected yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {threatChartData.slice(0, 6).map((threat, i) => (
+                  <div key={threat.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-sm text-muted">{threat.name}</span>
                     </div>
+                    <span className="text-sm font-medium text-text">{threat.value}</span>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </GlassCard>
         </motion.div>
       </div>
-
-      {/* Threat Distribution */}
-      <motion.div custom={8} initial="hidden" animate="visible" variants={fadeInUp} className="mt-6">
-        <GlassCard>
-          <h3 className="text-sm font-semibold text-muted mb-4">Threat Distribution</h3>
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={MOCK_THREAT_DISTRIBUTION}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {MOCK_THREAT_DISTRIBUTION.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: "#111827", border: "1px solid #1E293B", borderRadius: "0.75rem", color: "#F8FAFC" }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-col gap-2 min-w-[200px]">
-              {MOCK_THREAT_DISTRIBUTION.map((item, i) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                  <span className="text-sm text-muted">{item.name}</span>
-                  <span className="ml-auto text-sm font-medium text-text">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </GlassCard>
-      </motion.div>
     </div>
   );
 }

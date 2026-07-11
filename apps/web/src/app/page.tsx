@@ -198,18 +198,44 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="font-bold text-gradient">CyberGuardAI</span>
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-8 md:grid-cols-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="h-5 w-5 text-primary" />
+                <span className="font-bold text-gradient">CyberGuardAI</span>
+              </div>
+              <p className="text-sm text-muted">AI-Powered Website Security Analysis Platform. Defensive security tools for modern businesses.</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-text mb-3">Product</h4>
+              <div className="space-y-2 text-sm text-muted">
+                <Link href="/scanner" className="block hover:text-text transition-colors">Scanner</Link>
+                <Link href="/reports" className="block hover:text-text transition-colors">Reports</Link>
+                <Link href="/chat" className="block hover:text-text transition-colors">AI Chat</Link>
+                <Link href="/history" className="block hover:text-text transition-colors">History</Link>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-text mb-3">Company</h4>
+              <div className="space-y-2 text-sm text-muted">
+                <Link href="/about" className="block hover:text-text transition-colors">About</Link>
+                <Link href="/dashboard" className="block hover:text-text transition-colors">Dashboard</Link>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-text mb-3">Legal</h4>
+              <div className="space-y-2 text-sm text-muted">
+                <Link href="/privacy" className="block hover:text-text transition-colors">Privacy Policy</Link>
+                <Link href="/terms" className="block hover:text-text transition-colors">Terms & Conditions</Link>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted">
-            &copy; {new Date().getFullYear()} CyberGuard AI. Defensive security analysis only.
-          </p>
-          <div className="flex items-center gap-4 text-sm text-muted">
-            <Link href="/scanner" className="hover:text-text transition-colors">Scanner</Link>
-            <Link href="/reports" className="hover:text-text transition-colors">Reports</Link>
-            <Link href="/chat" className="hover:text-text transition-colors">AI Chat</Link>
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted">
+              &copy; {new Date().getFullYear()} CyberGuard AI. Defensive security analysis only.
+            </p>
+            <p className="text-xs text-muted">Built with enterprise-grade security in mind.</p>
           </div>
         </div>
       </footer>

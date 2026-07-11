@@ -1,25 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   FileText,
   Download,
   Trash2,
   Search,
-  Eye,
   Calendar,
   Shield,
   AlertTriangle,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { RISK_COLORS, RISK_LABELS } from "@cyberguard/shared";
+import { api } from "@/lib/api";
 import type { RiskLevel } from "@cyberguard/types";
 import { cn } from "@/lib/utils";
 
 interface Report {
-  id: string;
+  _id: string;
   title: string;
   url: string;
   domain: string;
@@ -30,15 +32,6 @@ interface Report {
   summary: string;
 }
 
-const MOCK_REPORTS: Report[] = [
-  { id: "r1", title: "Critical Threat Report", url: "https://example-shop.com", domain: "example-shop.com", riskScore: 82, riskLevel: "critical", generatedAt: "2025-07-11T10:35:00Z", findingsCount: 7, summary: "Multiple critical threats including crypto miner and credential harvesting detected." },
-  { id: "r2", title: "Clean Site Assessment", url: "https://my-portfolio.dev", domain: "my-portfolio.dev", riskScore: 15, riskLevel: "low", generatedAt: "2025-07-11T09:20:00Z", findingsCount: 1, summary: "Site appears clean with minor security header improvements recommended." },
-  { id: "r3", title: "Medium Risk Analysis", url: "https://news-site.org", domain: "news-site.org", riskScore: 45, riskLevel: "medium", generatedAt: "2025-07-11T08:05:00Z", findingsCount: 3, summary: "Suspicious external scripts and missing security headers detected." },
-  { id: "r4", title: "Phishing Site Detected", url: "https://bank-secure.net", domain: "bank-secure.net", riskScore: 91, riskLevel: "critical", generatedAt: "2025-07-10T22:50:00Z", findingsCount: 9, summary: "Confirmed phishing site mimicking a financial institution." },
-  { id: "r5", title: "Clean Blog Assessment", url: "https://tech-blog.io", domain: "tech-blog.io", riskScore: 8, riskLevel: "safe", generatedAt: "2025-07-10T18:35:00Z", findingsCount: 0, summary: "No threats detected. Site uses modern security practices." },
-  { id: "r6", title: "High Risk CDN", url: "https://cdn-assets.com", domain: "cdn-assets.com", riskScore: 62, riskLevel: "high", generatedAt: "2025-07-10T14:25:00Z", findingsCount: 5, summary: "CDN serving compromised assets with obfuscated malicious scripts." },
-];
-
 const SEVERITY_ICONS = {
   safe: CheckCircle,
   low: CheckCircle,
@@ -48,10 +41,35 @@ const SEVERITY_ICONS = {
 };
 
 export default function ReportsPage() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterLevel, setFilterLevel] = useState<RiskLevel | "all">("all");
 
-  const filtered = MOCK_REPORTS.filter((r) => {
+  useEffect(() => {
+    api.listReports()
+      .then((result) => setReports(result.data as unknown as Report[]))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleDownload = useCallback((report: Report) => {
+    const url = api.getReportDownloadUrl(report._id);
+    window.open(url, "_blank");
+    toast.success("Downloading report", { description: `PDF for ${report.domain}` });
+  }, []);
+
+  const handleDelete = useCallback(async (report: Report) => {
+    try {
+      await api.deleteReport(report._id);
+      setReports((prev) => prev.filter((r) => r._id !== report._id));
+      toast.success("Report deleted");
+    } catch {
+      toast.error("Failed to delete report");
+    }
+  }, []);
+
+  const filtered = reports.filter((r) => {
     const matchesSearch =
       !searchQuery ||
       r.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -59,6 +77,14 @@ export default function ReportsPage() {
     const matchesFilter = filterLevel === "all" || r.riskLevel === filterLevel;
     return matchesSearch && matchesFilter;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
@@ -79,7 +105,7 @@ export default function ReportsPage() {
             className="w-full rounded-xl bg-surface border border-border pl-10 pr-4 py-2.5 text-sm text-text placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(["all", "critical", "high", "medium", "low", "safe"] as const).map((level) => (
             <button
               key={level}
@@ -103,7 +129,7 @@ export default function ReportsPage() {
           const SeverityIcon = SEVERITY_ICONS[report.riskLevel];
           return (
             <motion.div
-              key={report.id}
+              key={report._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
@@ -144,13 +170,18 @@ export default function ReportsPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button className="p-1.5 rounded-lg hover:bg-surface text-muted hover:text-accent transition-colors" title="Preview">
-                      <Eye className="h-3.5 w-3.5" />
-                    </button>
-                    <button className="p-1.5 rounded-lg hover:bg-surface text-muted hover:text-primary transition-colors" title="Download">
+                    <button
+                      onClick={() => handleDownload(report)}
+                      className="p-1.5 rounded-lg hover:bg-surface text-muted hover:text-primary transition-colors"
+                      title="Download PDF"
+                    >
                       <Download className="h-3.5 w-3.5" />
                     </button>
-                    <button className="p-1.5 rounded-lg hover:bg-surface text-muted hover:text-danger transition-colors" title="Delete">
+                    <button
+                      onClick={() => handleDelete(report)}
+                      className="p-1.5 rounded-lg hover:bg-surface text-muted hover:text-danger transition-colors"
+                      title="Delete"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -164,7 +195,7 @@ export default function ReportsPage() {
       {filtered.length === 0 && (
         <div className="text-center py-16">
           <FileText className="h-12 w-12 text-muted/30 mx-auto mb-4" />
-          <p className="text-muted">No reports found matching your criteria.</p>
+          <p className="text-muted">No reports found.</p>
         </div>
       )}
     </div>

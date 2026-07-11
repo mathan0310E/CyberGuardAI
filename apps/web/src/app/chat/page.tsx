@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import {
   Send,
   Bot,
@@ -9,8 +12,10 @@ import {
   Copy,
   Check,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -27,47 +32,22 @@ const SUGGESTED_PROMPTS = [
   "Compare security headers between two websites",
 ];
 
-const MOCK_RESPONSES: Record<string, string> = {
-  default: `## Threat Analysis
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const scanId = searchParams.get("scan") ?? undefined;
 
-Based on the structured scan data, here's what I found:
-
-### Key Findings
-1. **Hidden iframe** loading content from an external suspicious domain — this is a common vector for drive-by downloads
-2. **Obfuscated JavaScript** using \`eval(atob(...))\` patterns — a strong indicator of malicious intent
-3. **Credential harvesting form** submitting data to an unencrypted external endpoint
-
-### Risk Assessment
-The site scores **72/100** on our risk scale, placing it in the **High Risk** category. The combination of obfuscated code and credential harvesting suggests this site may be actively stealing user data.
-
-### Recommendations
-- Immediately remove the hidden iframe and audit the page source
-- Replace all obfuscated JavaScript with clean implementations
-- Implement Content-Security-Policy headers to prevent inline script execution
-- Move all form submissions to HTTPS-only endpoints
-- Consider adding Subresource Integrity (SRI) hashes to external scripts
-
-### Technical Details
-The eval/atob pattern at \`script[src=main.js]:892\` decodes to:
-\`\`\`javascript
-document.cookies  // attempts to steal session cookies
-\`\`\`
-
-This is consistent with session hijacking malware. The site should be taken offline for remediation.`,
-};
-
-export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: `Hello! I'm **CyberGuard AI Assistant**. I can help you understand scan results, explain threats, and provide remediation guidance.\n\nAsk me anything about website security, malware detection, or threat analysis.`,
+      content: `Hello! I'm **CyberGuard AI Assistant**. I can help you understand scan results, explain threats, and provide remediation guidance.\n\n${scanId ? `I see you're asking about a specific scan. I'll use that context for my answers.` : "Ask me anything about website security, malware detection, or threat analysis."}`,
       timestamp: new Date().toISOString(),
     },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,7 +60,7 @@ export default function ChatPage() {
   }, [messages, isTyping, scrollToBottom]);
 
   const sendMessage = useCallback(
-    (text: string) => {
+    async (text: string) => {
       if (!text.trim() || isTyping) return;
 
       const userMessage: Message = {
@@ -94,19 +74,43 @@ export default function ChatPage() {
       setInput("");
       setIsTyping(true);
 
-      setTimeout(() => {
-        const response = MOCK_RESPONSES["default"] ?? "I'm unable to process that request.";
+      try {
+        const result = await api.sendChatMessage(
+          text.trim(),
+          scanId,
+          conversationId,
+          messages.filter((m) => m.id !== "welcome").map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+          }))
+        );
+
+        setConversationId(result.conversationId);
+
         const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
+          id: result.message.id,
           role: "assistant",
-          content: response,
-          timestamp: new Date().toISOString(),
+          content: result.message.content,
+          timestamp: result.message.timestamp,
         };
         setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Failed to get response";
+        toast.error("AI response failed", { description: msg });
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: "assistant",
+          content: "I apologize, but I encountered an error processing your request. Please try again.",
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
         setIsTyping(false);
-      }, 1500);
+      }
     },
-    [isTyping]
+    [isTyping, scanId, conversationId, messages]
   );
 
   const copyMessage = (id: string, content: string) => {
@@ -123,6 +127,9 @@ export default function ChatPage() {
           AI Security Assistant
         </h1>
         <p className="text-sm text-muted">Ask about scan results, threats, or security best practices</p>
+        {scanId && (
+          <p className="text-xs text-accent mt-1">Context: Scan {scanId}</p>
+        )}
       </motion.div>
 
       {/* Messages */}
@@ -151,16 +158,7 @@ export default function ChatPage() {
               >
                 {msg.role === "assistant" ? (
                   <div className="prose prose-invert prose-sm max-w-none">
-                    {msg.content.split("\n").map((line, i) => {
-                      if (line.startsWith("## ")) return <h2 key={i} className="text-base font-bold mt-0 mb-2">{line.slice(3)}</h2>;
-                      if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold mt-3 mb-1">{line.slice(4)}</h3>;
-                      if (line.startsWith("- ")) return <li key={i} className="ml-4 text-muted">{line.slice(2)}</li>;
-                      if (line.match(/^\d+\.\s/)) return <li key={i} className="ml-4 text-muted list-decimal">{line.replace(/^\d+\.\s/, "")}</li>;
-                      if (line.startsWith("```")) return null;
-                      if (line.startsWith("`") && line.endsWith("`")) return <code key={i} className="text-accent bg-accent/10 px-1 rounded text-xs">{line.slice(1, -1)}</code>;
-                      if (line.trim() === "") return <div key={i} className="h-2" />;
-                      return <p key={i} className="text-muted leading-relaxed">{line}</p>;
-                    })}
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 ) : (
                   <p>{msg.content}</p>
@@ -239,10 +237,22 @@ export default function ChatPage() {
             disabled={!input.trim() || isTyping}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white transition-all hover:bg-primary-light disabled:opacity-40 disabled:pointer-events-none shrink-0"
           >
-            <Send className="h-4 w-4" />
+            {isTyping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }
