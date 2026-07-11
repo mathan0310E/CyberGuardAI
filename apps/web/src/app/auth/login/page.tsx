@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   if (isAuthenticated) {
-    router.push("/");
+    router.replace("/");
     return null;
   }
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast.success("Welcome back!", { description: "You have been logged in successfully." });
-      router.push("/");
+      router.replace("/");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Login failed";
       toast.error("Login failed", { description: msg });
@@ -46,7 +46,7 @@ export default function LoginPage() {
     try {
       await loginWithGoogle();
       toast.success("Welcome!", { description: "Signed in with Google." });
-      router.push("/");
+      router.replace("/");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Google sign-in failed";
       toast.error("Google sign-in failed", { description: msg });

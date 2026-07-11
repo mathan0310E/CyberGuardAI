@@ -120,7 +120,7 @@ class ApiClient {
 
   // Reports
   async createReport(scanId: string) {
-    return this.request<Record<string, unknown>>(API_ENDPOINTS.reports.list, {
+    return this.request<Record<string, unknown>>(`${API_BASE_URL}/reports`, {
       method: "POST",
       body: JSON.stringify({ scanId }),
     });

@@ -120,9 +120,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await api.getMe() as unknown as User;
       setUser(userData);
     } catch {
-      await api.syncFirebaseUser();
-      const userData = await api.getMe() as unknown as User;
-      setUser(userData);
+      try {
+        await api.syncFirebaseUser();
+        const userData = await api.getMe() as unknown as User;
+        setUser(userData);
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
@@ -137,9 +141,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await api.getMe() as unknown as User;
       setUser(userData);
     } catch {
-      await api.syncFirebaseUser();
-      const userData = await api.getMe() as unknown as User;
-      setUser(userData);
+      try {
+        await api.syncFirebaseUser();
+        const userData = await api.getMe() as unknown as User;
+        setUser(userData);
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
@@ -173,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginWithGoogle,
         register,
         logout,
-        isAuthenticated: !!firebaseUser,
+        isAuthenticated: !!firebaseUser && !!user,
         isAdmin: user?.role === "admin",
       }}
     >

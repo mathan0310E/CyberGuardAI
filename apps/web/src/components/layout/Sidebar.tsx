@@ -142,7 +142,6 @@ export function Sidebar() {
         <div className="!mt-4 pt-4 border-t border-border/50">
           <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted/60">Enterprise</p>
           <div className="space-y-1">
-            <NavItem href="/teams" label="Team Collaboration" icon={Users} onClick={() => setMobileOpen(false)} />
             <NavItem href="/organizations" label="Organization" icon={Building2} onClick={() => setMobileOpen(false)} />
             <NavItem href="/scheduled-reports" label="Scheduled Reports" icon={Calendar} onClick={() => setMobileOpen(false)} />
             <NavItem href="/api-keys" label="API Keys" icon={Key} onClick={() => setMobileOpen(false)} />

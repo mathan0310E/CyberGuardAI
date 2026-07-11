@@ -31,7 +31,8 @@ async function fetchWebsiteHTML(url: string): Promise<string> {
       redirect: "follow",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    return await res.text();
+    const text = await res.text();
+    return text.length > 5_000_000 ? text.slice(0, 5_000_000) : text;
   } finally {
     clearTimeout(timer);
   }
@@ -141,7 +142,7 @@ export async function runScanPipeline(
     if (result.malwareIndicators.length === 0) {
       result.aiAnalysis = {
         riskScore: 0,
-        riskLevel: "safe",
+        riskLevel: "medium",
         executiveSummary: `Scan failed for ${scan.domain}: ${msg}. The site could not be reached or analyzed.`,
         threatExplanation: `The scan encountered an error: ${msg}`,
         recommendations: ["Verify the URL is accessible", "Check if the site is blocking automated requests", "Try again later"],

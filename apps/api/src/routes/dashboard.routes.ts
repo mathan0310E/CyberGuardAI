@@ -22,8 +22,10 @@ dashboardRoutes.get("/stats", asyncHandler(async (_req: Request, res: Response) 
   const categoryCounts: Record<string, number> = {};
   for (const scan of allScans) {
     for (const indicator of scan.malwareIndicators) {
-      const cat = (indicator as Record<string, unknown>)["category"] as string;
-      categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+      const cat = (indicator as Record<string, unknown>)["category"];
+      if (typeof cat === "string" && cat) {
+        categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+      }
     }
   }
   const threatDistribution = Object.entries(categoryCounts).map(([category, count]) => ({ category, count }));

@@ -351,7 +351,7 @@ export const store = {
         case "scan": return makeId("scan", scanIdCounter++);
         case "rpt": return makeId("rpt", reportIdCounter++);
         case "usr": return makeId("usr", userIdCounter++);
-        default: return makeId(prefix, 1);
+        default: return makeId(prefix, scanIdCounter++);
       }
     }
     const counterRef = db.collection("counters").doc(prefix);

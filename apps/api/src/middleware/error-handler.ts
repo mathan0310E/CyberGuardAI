@@ -13,9 +13,9 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   const statusCode = err.statusCode ?? 500;
-  const message = err.message ?? "Internal server error";
+  const message = statusCode >= 500 ? "Internal server error" : (err.message ?? "Request failed");
 
-  logger.error(`${statusCode}: ${message}`);
+  logger.error(`${statusCode}: ${err.message ?? "Unknown error"}`);
 
   res.status(statusCode).json({
     success: false,

@@ -74,7 +74,12 @@ authRoutes.post("/sync", asyncHandler(async (req: Request, res: Response) => {
       if (existingEmail) {
         // Link firebase UID to existing user
         await store.updateUser(existingEmail._id, { firebaseUid });
-        user = (await store.getUserById(existingEmail._id))!;
+        const linked = await store.getUserById(existingEmail._id);
+        if (!linked) {
+          res.status(500).json({ success: false, data: null, error: "Failed to link account", timestamp: new Date().toISOString() });
+          return;
+        }
+        user = linked;
       } else {
         // Create new user
         const userCount = await store.getUserCount();
@@ -107,16 +112,21 @@ authRoutes.post("/sync", asyncHandler(async (req: Request, res: Response) => {
       }
     }
 
+    if (!user) {
+      res.status(500).json({ success: false, data: null, error: "User sync failed", timestamp: new Date().toISOString() });
+      return;
+    }
+
     res.json({
       success: true,
       data: {
-        _id: user!._id,
-        fullName: user!.fullName,
-        username: user!.username,
-        email: user!.email,
-        role: user!.role,
-        status: user!.status,
-        companyName: user!.companyName,
+        _id: user._id,
+        fullName: user.fullName,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        companyName: user.companyName,
       },
       error: null,
       timestamp: new Date().toISOString(),

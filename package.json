@@ -4,8 +4,8 @@
   "scripts": {
     "dev:web": "pnpm --filter @cyberguard/web dev",
     "dev:api": "pnpm --filter @cyberguard/api dev",
-    "dev": "pnpm run --parallel dev:web dev:api",
-    "build": "pnpm run --parallel build:types build:web build:api",
+    "dev": "pnpm --filter @cyberguard/web --filter @cyberguard/api --parallel dev",
+    "build": "pnpm build:types && pnpm build:web && pnpm build:api",
     "build:types": "pnpm --filter @cyberguard/types build",
     "build:web": "pnpm --filter @cyberguard/web build",
     "build:api": "pnpm --filter @cyberguard/api build",

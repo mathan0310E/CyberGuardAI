@@ -202,11 +202,11 @@ function analyzeJavaScript($: cheerio.CheerioAPI): JSAnalysis {
       suspiciousPatterns.push("base64 encoding");
       obfuscatedSnippets.push(content.slice(0, 100));
     }
-    if (content.match(/\\x[0-9a-f]{2}/gi)?.length ?? 0 > 10) {
+    if ((content.match(/\\x[0-9a-f]{2}/gi)?.length ?? 0) > 10) {
       suspiciousPatterns.push("hex encoding");
       obfuscatedCount++;
     }
-    if (content.match(/\\u[0-9a-f]{4}/gi)?.length ?? 0 > 10) {
+    if ((content.match(/\\u[0-9a-f]{4}/gi)?.length ?? 0) > 10) {
       suspiciousPatterns.push("unicode escape");
       obfuscatedCount++;
     }

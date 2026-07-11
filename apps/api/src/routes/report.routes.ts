@@ -58,10 +58,15 @@ reportRoutes.get("/:id/download", asyncHandler(async (req: Request, res: Respons
     return;
   }
 
-  const pdfBuffer = await generatePDFReport(scan);
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="CyberGuard-Report-${report.domain}-${report._id}.pdf"`);
-  res.send(pdfBuffer);
+  try {
+    const pdfBuffer = await generatePDFReport(scan);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="CyberGuard-Report-${report.domain}-${report._id}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    logger.error("PDF download generation failed:", error);
+    res.status(500).json({ success: false, data: null, error: "Failed to generate PDF report", timestamp: new Date().toISOString() });
+  }
 }));
 
 reportRoutes.post("/", requireAuth, asyncHandler(async (req: Request, res: Response) => {

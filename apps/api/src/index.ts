@@ -94,14 +94,12 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, data: null, error: "Too many requests. Please try again later.", timestamp: new Date().toISOString() },
-  keyGenerator: (req) => req.ip ?? req.socket.remoteAddress ?? "unknown",
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { success: false, data: null, error: "Too many authentication attempts. Please try again later.", timestamp: new Date().toISOString() },
-  keyGenerator: (req) => req.ip ?? req.socket.remoteAddress ?? "unknown",
 });
 
 const chatLimiter = rateLimit({

@@ -46,6 +46,8 @@ Always provide clear, actionable, professional security advice. Use markdown for
         { role: "user" as const, content: message },
       ];
 
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -58,7 +60,9 @@ Always provide clear, actionable, professional security advice. Use markdown for
           max_tokens: 2048,
           temperature: 0.7,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
 
       if (!response.ok) {
         throw new Error(`OpenRouter API error: ${response.status}`);

@@ -188,7 +188,7 @@ export default function DashboardPage() {
                 stats.recentScans.map((scan) => (
                   <Link
                     key={scan._id}
-                    href={`/scanner`}
+                    href="/scanner"
                     className="flex items-center justify-between rounded-xl border border-border p-3 transition-all hover:border-primary/30 hover:bg-surface/50"
                   >
                     <div className="flex items-center gap-3 min-w-0">
