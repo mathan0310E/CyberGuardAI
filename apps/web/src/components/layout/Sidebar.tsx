@@ -8,7 +8,6 @@ import {
   Menu,
   X,
   LogOut,
-  Home,
   LayoutDashboard,
   Scan,
   MessageSquare,
@@ -28,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home", icon: Home },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/scanner", label: "URL Scanner", icon: Scan },
   { href: "/chat", label: "AI Assistant", icon: MessageSquare },
@@ -83,7 +81,7 @@ export function Sidebar() {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-border/50">
-        <Link href="/" className="flex items-center gap-2.5 group" onClick={() => setMobileOpen(false)}>
+        <Link href="/dashboard" className="flex items-center gap-2.5 group" onClick={() => setMobileOpen(false)}>
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 ring-1 ring-primary/30 transition-all group-hover:from-primary/30 group-hover:to-accent/30 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.3)]">
             <Shield className="h-5 w-5 text-primary" />
           </div>
@@ -172,7 +170,7 @@ export function Sidebar() {
       {/* Mobile Top Bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-50 glass-strong border-b border-border/50">
         <div className="flex items-center justify-between h-14 px-4">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 ring-1 ring-primary/30">
               <Shield className="h-4 w-4 text-primary" />
             </div>
