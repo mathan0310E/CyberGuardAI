@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "CyberGuard AI — AI-Powered Cybersecurity Platform",
   description:
     "Enterprise-grade AI platform for detecting malware, phishing, and security threats. Real-time threat intelligence, vulnerability scanning, and automated incident response.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
