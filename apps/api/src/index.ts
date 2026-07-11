@@ -10,6 +10,9 @@ import { dashboardRoutes } from "./routes/dashboard.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { adminRoutes } from "./routes/admin.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { initFirebase } from "./firebase.js";
+
+initFirebase();
 
 const app = express();
 const PORT = process.env["PORT"] ?? 3001;
@@ -41,7 +44,7 @@ app.get("/api/health", (_req, res) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     service: "cyberguard-api",
-    mode: process.env["MONGODB_URI"] ? "database" : "in-memory",
+    mode: process.env["FIREBASE_PROJECT_ID"] ? "firebase" : "in-memory",
     version: "1.0.0",
   });
 });
@@ -57,7 +60,7 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`CyberGuard API running on http://localhost:${PORT}`);
-  console.log(`Mode: ${process.env["MONGODB_URI"] ? "database" : "in-memory"}`);
+  console.log(`Mode: ${process.env["FIREBASE_PROJECT_ID"] ? "firebase" : "in-memory"}`);
   console.log(`Environment: ${process.env["NODE_ENV"] ?? "development"}`);
 });
 

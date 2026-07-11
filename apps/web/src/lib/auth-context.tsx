@@ -1,6 +1,16 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import { auth } from "./firebase";
 import { api } from "./api";
 
 interface User {
@@ -15,9 +25,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (data: {
     fullName: string;
     username: string;
@@ -30,7 +41,7 @@ interface AuthContextType {
     password: string;
     confirmPassword: string;
   }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
@@ -39,47 +50,78 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = typeof window !== "undefined" ? localStorage.getItem("cg_token") : null;
-    if (savedToken) {
-      setToken(savedToken);
-      api.setToken(savedToken);
-      api.getMe()
-        .then((data) => setUser(data as unknown as User))
-        .catch(() => {
-          localStorage.removeItem("cg_token");
-          setToken(null);
-          api.setToken(null);
-        })
-        .finally(() => setIsLoading(false));
-    } else {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        setFirebaseUser(fbUser);
+        try {
+          const token = await fbUser.getIdToken();
+          api.setToken(token);
+          const userData = await api.getMe() as unknown as User;
+          setUser(userData);
+        } catch {
+          setUser(null);
+        }
+      } else {
+        setFirebaseUser(null);
+        setUser(null);
+        api.setToken(null);
+      }
       setIsLoading(false);
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await api.login(email, password);
-    setToken(result.token);
-    setUser(result.user as unknown as User);
-    localStorage.setItem("cg_token", result.token);
-    api.setToken(result.token);
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    const token = await result.user.getIdToken();
+    api.setToken(token);
+
+    try {
+      const userData = await api.getMe() as unknown as User;
+      setUser(userData);
+    } catch {
+      // User doesn't exist in backend yet — auto-create via sync endpoint
+      await api.syncFirebaseUser();
+      const userData = await api.getMe() as unknown as User;
+      setUser(userData);
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const token = await result.user.getIdToken();
+    api.setToken(token);
+
+    try {
+      const userData = await api.getMe() as unknown as User;
+      setUser(userData);
+    } catch {
+      await api.syncFirebaseUser();
+      const userData = await api.getMe() as unknown as User;
+      setUser(userData);
+    }
   }, []);
 
   const register = useCallback(async (data: Parameters<typeof api.register>[0]) => {
-    const result = await api.register(data);
-    setToken(result.token);
-    setUser(result.user as unknown as User);
-    localStorage.setItem("cg_token", result.token);
-    api.setToken(result.token);
+    const result = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const token = await result.user.getIdToken();
+    api.setToken(token);
+
+    await api.syncFirebaseUser();
+    const userData = await api.getMe() as unknown as User;
+    setUser(userData);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await signOut(auth);
     setUser(null);
-    setToken(null);
-    localStorage.removeItem("cg_token");
+    setFirebaseUser(null);
     api.setToken(null);
   }, []);
 
@@ -87,12 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        token,
+        firebaseUser,
         isLoading,
         login,
+        loginWithGoogle,
         register,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated: !!firebaseUser,
         isAdmin: user?.role === "admin",
       }}
     >

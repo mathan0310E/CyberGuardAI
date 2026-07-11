@@ -64,6 +64,13 @@ class ApiClient {
     return this.request<Record<string, unknown>>(`${API_BASE_URL}/auth/me`);
   }
 
+  async syncFirebaseUser() {
+    return this.request<Record<string, unknown>>(
+      `${API_BASE_URL}/auth/sync`,
+      { method: "POST" }
+    );
+  }
+
   // Scans
   async createScan(url: string, options?: Record<string, boolean>) {
     return this.request<Record<string, unknown>>(API_ENDPOINTS.scans.create, {

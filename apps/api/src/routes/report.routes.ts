@@ -7,9 +7,8 @@ export const reportRoutes = Router();
 reportRoutes.get("/", async (_req: Request, res: Response) => {
   const page = Math.max(1, Number(_req.query["page"]) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(_req.query["pageSize"]) || 20));
-  const total = store.reports.length;
-  const start = (page - 1) * pageSize;
-  const data = store.reports.slice(start, start + pageSize).map((r) => ({
+  const { data: allReports, total } = await store.listReports(page, pageSize);
+  const data = allReports.map((r) => ({
     _id: r._id,
     scanId: r.scanId,
     title: r.title,
@@ -35,7 +34,7 @@ reportRoutes.get("/", async (_req: Request, res: Response) => {
 });
 
 reportRoutes.get("/:id", async (req: Request, res: Response) => {
-  const report = store.reports.find((r) => r._id === req.params["id"]);
+  const report = await store.getReportById(req.params["id"] as string);
   if (!report) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });
     return;
@@ -44,13 +43,13 @@ reportRoutes.get("/:id", async (req: Request, res: Response) => {
 });
 
 reportRoutes.get("/:id/download", async (req: Request, res: Response) => {
-  const report = store.reports.find((r) => r._id === req.params["id"]);
+  const report = await store.getReportById(req.params["id"] as string);
   if (!report) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });
     return;
   }
 
-  const scan = store.scans.find((s) => s._id === report.scanId) as MemoryScan | undefined;
+  const scan = await store.getScanById(report.scanId) as MemoryScan | null;
   if (!scan) {
     res.status(404).json({ success: false, data: null, error: "Associated scan not found", timestamp: new Date().toISOString() });
     return;
@@ -74,13 +73,13 @@ reportRoutes.post("/", async (req: Request, res: Response) => {
     return;
   }
 
-  const scan = store.scans.find((s) => s._id === scanId);
+  const scan = await store.getScanById(scanId);
   if (!scan) {
     res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
     return;
   }
 
-  const existingReport = store.reports.find((r) => r.scanId === scanId);
+  const existingReport = await store.getReportByScanId(scanId);
   if (existingReport) {
     res.json({ success: true, data: existingReport, error: null, timestamp: new Date().toISOString() });
     return;
@@ -89,8 +88,10 @@ reportRoutes.post("/", async (req: Request, res: Response) => {
   const aiAnalysis = scan.aiAnalysis as Record<string, unknown> | null;
   const indicators = scan.malwareIndicators as Record<string, unknown>[];
 
+  const _id = await store.getNextId("rpt");
+
   const report = {
-    _id: store.getNextReportId(),
+    _id,
     scanId,
     title: `${scan.riskLevel.charAt(0).toUpperCase() + scan.riskLevel.slice(1)} Risk Report — ${scan.domain}`,
     url: scan.url,
@@ -111,10 +112,10 @@ reportRoutes.post("/", async (req: Request, res: Response) => {
     console.error("PDF generation failed:", error);
   }
 
-  store.reports.unshift(report);
-  scan.reportId = report._id;
+  await store.addReport(report);
+  await store.updateScan(scan._id, { reportId: report._id });
 
-  store.addLog("info", `Report generated: ${report._id} for ${scan.domain}`);
+  await store.addLog("info", `Report generated: ${report._id} for ${scan.domain}`);
 
   res.status(201).json({
     success: true,
@@ -125,11 +126,11 @@ reportRoutes.post("/", async (req: Request, res: Response) => {
 });
 
 reportRoutes.delete("/:id", async (req: Request, res: Response) => {
-  const idx = store.reports.findIndex((r) => r._id === req.params["id"]);
-  if (idx === -1) {
+  const existing = await store.getReportById(req.params["id"] as string);
+  if (!existing) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });
     return;
   }
-  store.reports.splice(idx, 1);
+  await store.deleteReport(req.params["id"] as string);
   res.json({ success: true, data: { deleted: true }, error: null, timestamp: new Date().toISOString() });
 });

@@ -4,7 +4,8 @@ import { store } from "../store.js";
 export const adminRoutes = Router();
 
 adminRoutes.get("/users", async (_req: Request, res: Response) => {
-  const users = store.users.map((u) => ({
+  const allUsers = await store.listUsers();
+  const users = allUsers.map((u) => ({
     _id: u._id,
     fullName: u.fullName,
     username: u.username,
@@ -26,28 +27,31 @@ adminRoutes.patch("/users/:id/status", async (req: Request, res: Response) => {
     return;
   }
 
-  const user = store.users.find((u) => u._id === req.params["id"]);
+  const user = await store.getUserById(req.params["id"] as string);
   if (!user) {
     res.status(404).json({ success: false, data: null, error: "User not found", timestamp: new Date().toISOString() });
     return;
   }
 
-  user.status = status as "active" | "suspended" | "blocked" | "pending_review";
-  user.updatedAt = new Date();
+  await store.updateUser(user._id, {
+    status: status as "active" | "suspended" | "blocked" | "pending_review",
+    updatedAt: new Date(),
+  });
 
-  store.addLog("info", `Admin updated user ${user.email} status to ${status}`);
+  await store.addLog("info", `Admin updated user ${user.email} status to ${status}`);
 
-  res.json({ success: true, data: { _id: user._id, status: user.status }, error: null, timestamp: new Date().toISOString() });
+  res.json({ success: true, data: { _id: user._id, status }, error: null, timestamp: new Date().toISOString() });
 });
 
 adminRoutes.get("/stats", async (_req: Request, res: Response) => {
-  const totalScans = store.scans.length;
-  const completedScans = store.scans.filter((s) => s.status === "completed").length;
-  const malwareDetected = store.scans.filter((s) => s.status === "completed" && s.riskScore >= 40).length;
-  const totalUsers = store.users.length;
-  const activeUsers = store.users.filter((u) => u.status === "active").length;
-  const totalReports = store.reports.length;
-  const logs = store.logs.slice(-50);
+  const allScans = await store.getAllScans();
+  const totalScans = allScans.length;
+  const completedScans = allScans.filter((s) => s.status === "completed").length;
+  const malwareDetected = allScans.filter((s) => s.status === "completed" && s.riskScore >= 40).length;
+  const totalUsers = await store.getUserCount();
+  const activeUsers = await store.getActiveUserCount();
+  const { total: totalReports } = await store.listReports(1, 1);
+  const logs = await store.getRecentLogs(50);
 
   res.json({
     success: true,
@@ -60,9 +64,7 @@ adminRoutes.get("/stats", async (_req: Request, res: Response) => {
 adminRoutes.get("/logs", async (req: Request, res: Response) => {
   const page = Math.max(1, Number(req.query["page"]) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(req.query["pageSize"]) || 50));
-  const total = store.logs.length;
-  const start = (page - 1) * pageSize;
-  const data = store.logs.slice(start, start + pageSize).reverse();
+  const { data, total } = await store.listLogs(page, pageSize);
 
   res.json({
     success: true,

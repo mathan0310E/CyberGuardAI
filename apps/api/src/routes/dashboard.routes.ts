@@ -4,21 +4,22 @@ import { store } from "../store.js";
 export const dashboardRoutes = Router();
 
 dashboardRoutes.get("/stats", async (_req: Request, res: Response) => {
-  const totalScans = store.scans.length;
-  const completedScans = store.scans.filter((s) => s.status === "completed").length;
-  const malwareDetected = store.scans.filter((s) => s.status === "completed" && s.riskScore >= 40).length;
-  const cleanSites = store.scans.filter((s) => s.status === "completed" && s.riskScore < 20).length;
+  const allScans = await store.getAllScans();
 
-  const completedScores = store.scans.filter((s) => s.status === "completed").map((s) => s.riskScore);
+  const totalScans = allScans.length;
+  const completedScans = allScans.filter((s) => s.status === "completed").length;
+  const malwareDetected = allScans.filter((s) => s.status === "completed" && s.riskScore >= 40).length;
+  const cleanSites = allScans.filter((s) => s.status === "completed" && s.riskScore < 20).length;
+
+  const completedScores = allScans.filter((s) => s.status === "completed").map((s) => s.riskScore);
   const averageRiskScore = completedScores.length > 0
     ? Math.round((completedScores.reduce((a, b) => a + b, 0) / completedScores.length) * 10) / 10
     : 0;
 
-  const recentScans = store.scans.slice(0, 10);
+  const recentScans = await store.getRecentScans(10);
 
-  // Aggregate threat categories from all scans
   const categoryCounts: Record<string, number> = {};
-  for (const scan of store.scans) {
+  for (const scan of allScans) {
     for (const indicator of scan.malwareIndicators) {
       const cat = (indicator as Record<string, unknown>)["category"] as string;
       categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;

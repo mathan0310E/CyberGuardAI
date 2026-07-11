@@ -1,7 +1,9 @@
 import type { RiskLevel, ScanStatus } from "@cyberguard/types";
+import { getDb } from "./firebase.js";
 
 export interface MemoryUser {
   _id: string;
+  firebaseUid?: string;
   fullName: string;
   username: string;
   email: string;
@@ -67,6 +69,8 @@ export interface MemoryLog {
   timestamp: Date;
 }
 
+// ── In-memory fallback (used when Firebase is not configured) ──
+
 let scanIdCounter = 1;
 let reportIdCounter = 1;
 let userIdCounter = 1;
@@ -76,65 +80,288 @@ function makeId(prefix: string, counter: number): string {
   return `${prefix}_${counter.toString().padStart(4, "0")}`;
 }
 
-const now = new Date();
-const scans: MemoryScan[] = [
-  {
-    _id: makeId("scan", scanIdCounter++), url: "https://example-shop.com", domain: "example-shop.com",
-    status: "completed", riskScore: 82, riskLevel: "critical",
-    scanOptions: { deepScan: true }, htmlAnalysis: null, jsAnalysis: null, screenshot: null,
-    ocrResults: null, cvAnalysis: null, threatIntel: [], technologies: [],
-    malwareIndicators: [
-      { id: "ind-1", category: "crypto_miner", severity: "critical", title: "Cryptocurrency miner script", description: "Known mining library detected.", evidence: "coinhive.min.js", location: "analytics.js:45", recommendation: "Remove." },
-      { id: "ind-2", category: "hidden_iframe", severity: "high", title: "Hidden iframe", description: "Invisible iframe loading external content.", evidence: '<iframe style="display:none" src="https://malicious-cdn.xyz">', location: "index.html:142", recommendation: "Remove iframe." },
-    ],
-    aiAnalysis: { riskScore: 82, riskLevel: "critical", executiveSummary: "Critical threats found.", threatExplanation: "Crypto miner and hidden iframe detected.", recommendations: ["Remove miner", "Remove hidden iframe"], detailedBreakdown: "", complianceIssues: [] },
-    reportId: null, userId: null, startedAt: new Date(now.getTime() - 3600000), completedAt: now, duration: 12.4, createdAt: new Date(now.getTime() - 3600000), updatedAt: now,
-  },
-  {
-    _id: makeId("scan", scanIdCounter++), url: "https://my-portfolio.dev", domain: "my-portfolio.dev",
-    status: "completed", riskScore: 15, riskLevel: "low",
-    scanOptions: { deepScan: true }, htmlAnalysis: null, jsAnalysis: null, screenshot: null,
-    ocrResults: null, cvAnalysis: null, threatIntel: [], technologies: [],
-    malwareIndicators: [
-      { id: "ind-3", category: "security_header_issue", severity: "low", title: "Missing CSP header", description: "Content-Security-Policy not set.", evidence: "", location: "HTTP headers", recommendation: "Add CSP header." },
-    ],
-    aiAnalysis: { riskScore: 15, riskLevel: "low", executiveSummary: "Low risk site.", threatExplanation: "Minor header issues.", recommendations: ["Add CSP header"], detailedBreakdown: "", complianceIssues: [] },
-    reportId: null, userId: null, startedAt: new Date(now.getTime() - 7200000), completedAt: new Date(now.getTime() - 7190000), duration: 8.2, createdAt: new Date(now.getTime() - 7200000), updatedAt: new Date(now.getTime() - 7190000),
-  },
-  {
-    _id: makeId("scan", scanIdCounter++), url: "https://news-site.org", domain: "news-site.org",
-    status: "completed", riskScore: 45, riskLevel: "medium",
-    scanOptions: { deepScan: true }, htmlAnalysis: null, jsAnalysis: null, screenshot: null,
-    ocrResults: null, cvAnalysis: null, threatIntel: [], technologies: [],
-    malwareIndicators: [
-      { id: "ind-4", category: "obfuscated_js", severity: "medium", title: "Obfuscated JavaScript", description: "eval() usage detected.", evidence: "eval(atob(...))", location: "main.js:200", recommendation: "Replace with clean code." },
-    ],
-    aiAnalysis: { riskScore: 45, riskLevel: "medium", executiveSummary: "Medium risk.", threatExplanation: "Obfuscated JS found.", recommendations: ["Clean up JS"], detailedBreakdown: "", complianceIssues: [] },
-    reportId: null, userId: null, startedAt: new Date(now.getTime() - 10800000), completedAt: new Date(now.getTime() - 10790000), duration: 15.0, createdAt: new Date(now.getTime() - 10800000), updatedAt: new Date(now.getTime() - 10790000),
-  },
+const memScans: MemoryScan[] = [];
+const memReports: MemoryReport[] = [];
+const memUsers: MemoryUser[] = [];
+const memLogs: MemoryLog[] = [
+  { _id: makeId("log", logIdCounter++), level: "info", message: "CyberGuard API started", userId: null, timestamp: new Date() },
 ];
 
-const reports: MemoryReport[] = [
-  { _id: makeId("rpt", reportIdCounter++), scanId: scans[0]!._id, title: "Critical Threat Report", url: scans[0]!.url, domain: scans[0]!.domain, riskScore: 82, riskLevel: "critical", summary: "Multiple critical threats detected.", findingsCount: 2, pdfData: null, generatedAt: scans[0]!.completedAt ?? now, createdAt: now },
-  { _id: makeId("rpt", reportIdCounter++), scanId: scans[1]!._id, title: "Clean Site Assessment", url: scans[1]!.url, domain: scans[1]!.domain, riskScore: 15, riskLevel: "low", summary: "Site appears clean.", findingsCount: 1, pdfData: null, generatedAt: scans[1]!.completedAt ?? now, createdAt: now },
-  { _id: makeId("rpt", reportIdCounter++), scanId: scans[2]!._id, title: "Medium Risk Analysis", url: scans[2]!.url, domain: scans[2]!.domain, riskScore: 45, riskLevel: "medium", summary: "Suspicious scripts detected.", findingsCount: 1, pdfData: null, generatedAt: scans[2]!.completedAt ?? now, createdAt: now },
-];
+// ── Firestore helpers ──
 
-const users: MemoryUser[] = [];
+function toFirestoreData(obj: Record<string, unknown>): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    if (value instanceof Date) {
+      data[key] = value;
+    } else if (Array.isArray(value)) {
+      data[key] = value;
+    } else if (typeof value === "object" && value !== null) {
+      data[key] = value;
+    } else {
+      data[key] = value;
+    }
+  }
+  return data;
+}
 
-const logs: MemoryLog[] = [
-  { _id: makeId("log", logIdCounter++), level: "info", message: "CyberGuard API started (in-memory mode)", userId: null, timestamp: now },
-];
+function fromFirestoreDoc(doc: FirebaseFirestore.DocumentSnapshot): Record<string, unknown> | null {
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return { _id: doc.id, ...data } as Record<string, unknown>;
+}
+
+// ── Store ──
 
 export const store = {
-  scans,
-  reports,
-  users,
-  logs,
-  getNextScanId: () => makeId("scan", scanIdCounter++),
-  getNextReportId: () => makeId("rpt", reportIdCounter++),
-  getNextUserId: () => makeId("usr", userIdCounter++),
-  addLog: (level: "info" | "warn" | "error", message: string, userId?: string) => {
-    logs.push({ _id: makeId("log", logIdCounter++), level, message, userId: userId ?? null, timestamp: new Date() });
+  // ── Scans ──
+
+  async getScanById(id: string): Promise<MemoryScan | null> {
+    const db = getDb();
+    if (!db) return memScans.find((s) => s._id === id) ?? null;
+    const doc = await db.collection("scans").doc(id).get();
+    return fromFirestoreDoc(doc) as unknown as MemoryScan | null;
+  },
+
+  async addScan(scan: MemoryScan): Promise<void> {
+    const db = getDb();
+    if (!db) { memScans.unshift(scan); return; }
+    await db.collection("scans").doc(scan._id).set(toFirestoreData(scan as unknown as Record<string, unknown>));
+  },
+
+  async updateScan(id: string, data: Partial<MemoryScan>): Promise<void> {
+    const db = getDb();
+    if (!db) {
+      const scan = memScans.find((s) => s._id === id);
+      if (scan) Object.assign(scan, data);
+      return;
+    }
+    await db.collection("scans").doc(id).update(toFirestoreData(data as unknown as Record<string, unknown>));
+  },
+
+  async deleteScan(id: string): Promise<void> {
+    const db = getDb();
+    if (!db) {
+      const idx = memScans.findIndex((s) => s._id === id);
+      if (idx !== -1) memScans.splice(idx, 1);
+      return;
+    }
+    await db.collection("scans").doc(id).delete();
+  },
+
+  async listScans(page: number, pageSize: number): Promise<{ data: MemoryScan[]; total: number }> {
+    const db = getDb();
+    if (!db) {
+      const total = memScans.length;
+      const start = (page - 1) * pageSize;
+      return { data: memScans.slice(start, start + pageSize), total };
+    }
+    const countSnap = await db.collection("scans").count().get();
+    const total = countSnap.data().count;
+    const snap = await db.collection("scans").orderBy("createdAt", "desc").offset((page - 1) * pageSize).limit(pageSize).get();
+    const data = snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryScan);
+    return { data, total };
+  },
+
+  async getAllScans(): Promise<MemoryScan[]> {
+    const db = getDb();
+    if (!db) return [...memScans];
+    const snap = await db.collection("scans").orderBy("createdAt", "desc").get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryScan);
+  },
+
+  async getRecentScans(limit: number): Promise<MemoryScan[]> {
+    const db = getDb();
+    if (!db) return memScans.slice(0, limit);
+    const snap = await db.collection("scans").orderBy("createdAt", "desc").limit(limit).get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryScan);
+  },
+
+  async getScansByUser(userId: string): Promise<MemoryScan[]> {
+    const db = getDb();
+    if (!db) return memScans.filter((s) => s.userId === userId);
+    const snap = await db.collection("scans").where("userId", "==", userId).orderBy("createdAt", "desc").get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryScan);
+  },
+
+  // ── Reports ──
+
+  async addReport(report: MemoryReport): Promise<void> {
+    const db = getDb();
+    if (!db) { memReports.unshift(report); return; }
+    await db.collection("reports").doc(report._id).set(toFirestoreData(report as unknown as Record<string, unknown>));
+  },
+
+  async getReportById(id: string): Promise<MemoryReport | null> {
+    const db = getDb();
+    if (!db) return memReports.find((r) => r._id === id) ?? null;
+    const doc = await db.collection("reports").doc(id).get();
+    return fromFirestoreDoc(doc) as unknown as MemoryReport | null;
+  },
+
+  async getReportByScanId(scanId: string): Promise<MemoryReport | null> {
+    const db = getDb();
+    if (!db) return memReports.find((r) => r.scanId === scanId) ?? null;
+    const snap = await db.collection("reports").where("scanId", "==", scanId).limit(1).get();
+    return snap.docs.length > 0 ? (fromFirestoreDoc(snap.docs[0]!) as unknown as MemoryReport) : null;
+  },
+
+  async deleteReport(id: string): Promise<void> {
+    const db = getDb();
+    if (!db) {
+      const idx = memReports.findIndex((r) => r._id === id);
+      if (idx !== -1) memReports.splice(idx, 1);
+      return;
+    }
+    await db.collection("reports").doc(id).delete();
+  },
+
+  async listReports(page: number, pageSize: number): Promise<{ data: MemoryReport[]; total: number }> {
+    const db = getDb();
+    if (!db) {
+      const total = memReports.length;
+      const start = (page - 1) * pageSize;
+      return { data: memReports.slice(start, start + pageSize), total };
+    }
+    const countSnap = await db.collection("reports").count().get();
+    const total = countSnap.data().count;
+    const snap = await db.collection("reports").orderBy("createdAt", "desc").offset((page - 1) * pageSize).limit(pageSize).get();
+    const data = snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryReport);
+    return { data, total };
+  },
+
+  async getAllReports(): Promise<MemoryReport[]> {
+    const db = getDb();
+    if (!db) return [...memReports];
+    const snap = await db.collection("reports").orderBy("createdAt", "desc").get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryReport);
+  },
+
+  // ── Users ──
+
+  async addUser(user: MemoryUser): Promise<void> {
+    const db = getDb();
+    if (!db) { memUsers.push(user); return; }
+    await db.collection("users").doc(user._id).set(toFirestoreData(user as unknown as Record<string, unknown>));
+  },
+
+  async getUserById(id: string): Promise<MemoryUser | null> {
+    const db = getDb();
+    if (!db) return memUsers.find((u) => u._id === id) ?? null;
+    const doc = await db.collection("users").doc(id).get();
+    return fromFirestoreDoc(doc) as unknown as MemoryUser | null;
+  },
+
+  async getUserByEmail(email: string): Promise<MemoryUser | null> {
+    const db = getDb();
+    if (!db) return memUsers.find((u) => u.email === email) ?? null;
+    const snap = await db.collection("users").where("email", "==", email).limit(1).get();
+    return snap.docs.length > 0 ? (fromFirestoreDoc(snap.docs[0]!) as unknown as MemoryUser) : null;
+  },
+
+  async getUserByUsername(username: string): Promise<MemoryUser | null> {
+    const db = getDb();
+    if (!db) return memUsers.find((u) => u.username === username) ?? null;
+    const snap = await db.collection("users").where("username", "==", username).limit(1).get();
+    return snap.docs.length > 0 ? (fromFirestoreDoc(snap.docs[0]!) as unknown as MemoryUser) : null;
+  },
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<MemoryUser | null> {
+    const db = getDb();
+    if (!db) return memUsers.find((u) => u.firebaseUid === firebaseUid) ?? null;
+    const snap = await db.collection("users").where("firebaseUid", "==", firebaseUid).limit(1).get();
+    return snap.docs.length > 0 ? (fromFirestoreDoc(snap.docs[0]!) as unknown as MemoryUser) : null;
+  },
+
+  async updateUser(id: string, data: Partial<MemoryUser>): Promise<void> {
+    const db = getDb();
+    if (!db) {
+      const user = memUsers.find((u) => u._id === id);
+      if (user) Object.assign(user, data);
+      return;
+    }
+    await db.collection("users").doc(id).update(toFirestoreData(data as unknown as Record<string, unknown>));
+  },
+
+  async listUsers(): Promise<MemoryUser[]> {
+    const db = getDb();
+    if (!db) return [...memUsers];
+    const snap = await db.collection("users").orderBy("createdAt", "desc").get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryUser);
+  },
+
+  async getUserCount(): Promise<number> {
+    const db = getDb();
+    if (!db) return memUsers.length;
+    const snap = await db.collection("users").count().get();
+    return snap.data().count;
+  },
+
+  async getActiveUserCount(): Promise<number> {
+    const db = getDb();
+    if (!db) return memUsers.filter((u) => u.status === "active").length;
+    const snap = await db.collection("users").where("status", "==", "active").count().get();
+    return snap.data().count;
+  },
+
+  // ── Logs ──
+
+  async addLog(level: "info" | "warn" | "error", message: string, userId?: string): Promise<void> {
+    const db = getDb();
+    const log: MemoryLog = { _id: makeId("log", logIdCounter++), level, message, userId: userId ?? null, timestamp: new Date() };
+    if (!db) { memLogs.push(log); return; }
+    await db.collection("logs").doc(log._id).set(toFirestoreData(log as unknown as Record<string, unknown>));
+  },
+
+  async listLogs(page: number, pageSize: number): Promise<{ data: MemoryLog[]; total: number }> {
+    const db = getDb();
+    if (!db) {
+      const total = memLogs.length;
+      const start = (page - 1) * pageSize;
+      return { data: memLogs.slice(start, start + pageSize).reverse(), total };
+    }
+    const countSnap = await db.collection("logs").count().get();
+    const total = countSnap.data().count;
+    const snap = await db.collection("logs").orderBy("timestamp", "desc").offset((page - 1) * pageSize).limit(pageSize).get();
+    const data = snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryLog);
+    return { data, total };
+  },
+
+  async getRecentLogs(limit: number): Promise<MemoryLog[]> {
+    const db = getDb();
+    if (!db) return memLogs.slice(-limit);
+    const snap = await db.collection("logs").orderBy("timestamp", "desc").limit(limit).get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryLog);
+  },
+
+  async getAllLogs(): Promise<MemoryLog[]> {
+    const db = getDb();
+    if (!db) return [...memLogs];
+    const snap = await db.collection("logs").orderBy("timestamp", "desc").get();
+    return snap.docs.map((d) => fromFirestoreDoc(d) as unknown as MemoryLog);
+  },
+
+  // ── ID Counters ──
+
+  async getNextId(prefix: string): Promise<string> {
+    const db = getDb();
+    if (!db) {
+      switch (prefix) {
+        case "scan": return makeId("scan", scanIdCounter++);
+        case "rpt": return makeId("rpt", reportIdCounter++);
+        case "usr": return makeId("usr", userIdCounter++);
+        default: return makeId(prefix, 1);
+      }
+    }
+    const counterRef = db.collection("counters").doc(prefix);
+    const result = await db.runTransaction(async (t) => {
+      const doc = await t.get(counterRef);
+      const current = doc.exists ? (doc.data()?.["value"] as number ?? 0) : 0;
+      const next = current + 1;
+      t.set(counterRef, { value: next });
+      return next;
+    });
+    return makeId(prefix, result);
   },
 };

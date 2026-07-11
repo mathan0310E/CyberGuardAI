@@ -203,3 +203,113 @@
     border-radius: inherit;
   }
 }
+
+/* ── Cyberpunk Clip-Path Button ─────────────────────────── */
+
+@property --cyber-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.cyber-btn {
+  position: relative;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cyber-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: inherit;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cyber-btn::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  z-index: -1;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.cyber-btn:hover::after {
+  opacity: 1;
+}
+
+/* Primary variant */
+.cyber-btn-primary {
+  background: linear-gradient(135deg, #00E5FF, #00B4D8, #0096B4);
+  color: #07090D;
+  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.3));
+}
+
+.cyber-btn-primary::before {
+  background: linear-gradient(135deg, #33EBFF, #00E5FF, #00B4D8);
+  opacity: 0;
+}
+
+.cyber-btn-primary::after {
+  background: linear-gradient(135deg, #00E5FF, #7C3AED, #00E5FF);
+}
+
+.cyber-btn-primary:hover {
+  filter: drop-shadow(0 0 25px rgba(0, 229, 255, 0.6)) drop-shadow(0 0 50px rgba(0, 229, 255, 0.3));
+  transform: translateY(-1px);
+}
+
+.cyber-btn-primary:hover::before {
+  opacity: 1;
+}
+
+.cyber-btn-primary:active {
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.4));
+  transform: translateY(0) scale(0.98);
+}
+
+/* Secondary variant */
+.cyber-btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: none;
+  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.1));
+}
+
+.cyber-btn-secondary::before {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(124, 58, 237, 0.05));
+  opacity: 0;
+}
+
+.cyber-btn-secondary::after {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(124, 58, 237, 0.2), rgba(0, 229, 255, 0.3));
+}
+
+.cyber-btn-secondary:hover {
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.2));
+  transform: translateY(-1px);
+}
+
+.cyber-btn-secondary:hover::before {
+  opacity: 1;
+}
+
+/* Danger variant */
+.cyber-btn-danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.1));
+  color: #EF4444;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.15));
+}
+
+.cyber-btn-danger::after {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.4));
+}
+
+.cyber-btn-danger:hover {
+  filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.4));
+  transform: translateY(-1px);
+}

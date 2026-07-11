@@ -22,7 +22,7 @@ chatRoutes.post("/", async (req: Request, res: Response) => {
 
   let scanContext = "";
   if (scanId) {
-    const scan = store.scans.find((s) => s._id === scanId);
+    const scan = await store.getScanById(scanId);
     if (scan) {
       scanContext = buildScanContext(scan as unknown as Record<string, unknown>);
     }
@@ -65,7 +65,7 @@ Always provide clear, actionable, professional security advice. Use markdown for
       const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
       const content = data.choices?.[0]?.message?.content ?? "I couldn't generate a response. Please try again.";
 
-      store.addLog("info", `AI chat response generated (scan: ${scanId ?? "none"})`);
+      await store.addLog("info", `AI chat response generated (scan: ${scanId ?? "none"})`);
 
       res.json({
         success: true,

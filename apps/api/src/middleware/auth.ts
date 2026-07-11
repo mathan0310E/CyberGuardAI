@@ -1,24 +1,55 @@
 import { type Request, type Response, type NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { getAdminAuth } from "../firebase.js";
 import { store } from "../store.js";
-
-const JWT_SECRET = process.env["JWT_SECRET"] ?? "cyberguard-dev-secret-change-in-production";
 
 export interface AuthRequest extends Request {
   userId?: string;
+  firebaseUid?: string;
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
     res.status(401).json({ success: false, data: null, error: "Authentication required", timestamp: new Date().toISOString() });
     return;
   }
 
+  const token = authHeader.slice(7);
+  const adminAuth = getAdminAuth();
+
+  // Firebase mode: verify ID token
+  if (adminAuth) {
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      const firebaseUid = decoded.uid;
+
+      // Find user in store by firebaseUid
+      const user = await store.getUserByFirebaseUid(firebaseUid);
+      if (!user) {
+        res.status(401).json({ success: false, data: null, error: "User not found. Please sync your account.", timestamp: new Date().toISOString() });
+        return;
+      }
+
+      if (user.status === "blocked" || user.status === "suspended") {
+        res.status(403).json({ success: false, data: null, error: "Account is not active", timestamp: new Date().toISOString() });
+        return;
+      }
+
+      req.userId = user._id;
+      req.firebaseUid = firebaseUid;
+      next();
+    } catch {
+      res.status(401).json({ success: false, data: null, error: "Invalid or expired token", timestamp: new Date().toISOString() });
+    }
+    return;
+  }
+
+  // Fallback: legacy JWT mode (when Firebase not configured)
+  const JWT_SECRET = process.env["JWT_SECRET"] ?? "cyberguard-dev-secret-change-in-production";
   try {
-    const token = authHeader.slice(7);
+    const jwt = (await import("jsonwebtoken")).default;
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const user = store.users.find((u) => u._id === decoded.userId);
+    const user = await store.getUserById(decoded.userId);
 
     if (!user) {
       res.status(401).json({ success: false, data: null, error: "User not found", timestamp: new Date().toISOString() });

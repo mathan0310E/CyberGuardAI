@@ -65,19 +65,15 @@ export async function runScanPipeline(
     result.malwareIndicators = htmlResult.indicators;
 
     updateStatus("analyzing_js");
-    // JS analysis is already part of htmlResult
-    store.addLog("info", `JS analysis complete for ${scan.domain}: ${htmlResult.jsAnalysis.totalScripts} scripts, ${htmlResult.jsAnalysis.obfuscatedCount} obfuscated`);
+    await store.addLog("info", `JS analysis complete for ${scan.domain}: ${htmlResult.jsAnalysis.totalScripts} scripts, ${htmlResult.jsAnalysis.obfuscatedCount} obfuscated`);
 
     updateStatus("capturing_screenshot");
-    // Screenshot capture is a placeholder — would use Playwright in production
     result.screenshot = null;
 
     updateStatus("running_ocr");
-    // OCR is a placeholder — would use Tesseract.js in production
     result.ocrResults = null;
 
     updateStatus("running_cv");
-    // CV analysis is a placeholder — would use Transformers.js in production
     result.cvAnalysis = null;
 
     updateStatus("checking_threat_intel");
@@ -136,11 +132,11 @@ export async function runScanPipeline(
     });
     result.aiAnalysis = aiResult;
 
-    store.addLog("info", `Scan pipeline complete for ${scan.domain}: risk=${aiResult.riskScore}, level=${aiResult.riskLevel}`);
+    await store.addLog("info", `Scan pipeline complete for ${scan.domain}: risk=${aiResult.riskScore}, level=${aiResult.riskLevel}`);
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    store.addLog("error", `Scan pipeline failed for ${scan.domain}: ${msg}`);
+    await store.addLog("error", `Scan pipeline failed for ${scan.domain}: ${msg}`);
 
     if (result.malwareIndicators.length === 0) {
       result.aiAnalysis = {

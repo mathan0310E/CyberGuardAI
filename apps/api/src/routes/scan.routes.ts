@@ -10,9 +10,7 @@ export const scanRoutes = Router();
 scanRoutes.get("/", async (_req: Request, res: Response) => {
   const page = Math.max(1, Number(_req.query["page"]) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(_req.query["pageSize"]) || 20));
-  const total = store.scans.length;
-  const start = (page - 1) * pageSize;
-  const data = store.scans.slice(start, start + pageSize);
+  const { data, total } = await store.listScans(page, pageSize);
 
   res.json({
     success: true,
@@ -26,7 +24,7 @@ scanRoutes.get("/", async (_req: Request, res: Response) => {
 });
 
 scanRoutes.get("/:id", async (req: Request, res: Response) => {
-  const scan = store.scans.find((s) => s._id === req.params["id"]);
+  const scan = await store.getScanById(req.params["id"] as string);
   if (!scan) {
     res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
     return;
@@ -51,9 +49,10 @@ scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   }
 
   const now = new Date();
+  const _id = await store.getNextId("scan");
 
   const scan: MemoryScan = {
-    _id: store.getNextScanId(),
+    _id,
     url,
     domain,
     status: "pending",
@@ -78,52 +77,65 @@ scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
     updatedAt: now,
   };
 
-  store.scans.unshift(scan);
-  store.addLog("info", `Scan started: ${url}`);
+  await store.addScan(scan);
+  await store.addLog("info", `Scan started: ${url}`);
 
   const updateStatus = (status: MemoryScan["status"]) => {
-    scan.status = status;
-    scan.updatedAt = new Date();
+    store.updateScan(scan._id, { status, updatedAt: new Date() }).catch(() => {});
   };
 
-  runScanPipeline(scan, updateStatus).then((result) => {
-    scan.status = "completed";
-    scan.htmlAnalysis = result.htmlAnalysis;
-    scan.jsAnalysis = result.jsAnalysis;
-    scan.screenshot = result.screenshot;
-    scan.ocrResults = result.ocrResults;
-    scan.cvAnalysis = result.cvAnalysis;
-    scan.threatIntel = result.threatIntel as unknown as Record<string, unknown>[];
-    scan.technologies = result.technologies as unknown as Record<string, unknown>[];
-    scan.malwareIndicators = result.malwareIndicators as unknown as Record<string, unknown>[];
-    scan.aiAnalysis = result.aiAnalysis as unknown as Record<string, unknown>;
-    scan.completedAt = new Date();
-    scan.duration = Math.round((Date.now() - scan.startedAt.getTime()) / 1000);
-    scan.updatedAt = new Date();
+  runScanPipeline(scan, updateStatus).then(async (result) => {
+    const completedAt = new Date();
+    const duration = Math.round((Date.now() - scan.startedAt.getTime()) / 1000);
+
+    const updateData: Partial<MemoryScan> = {
+      status: "completed",
+      htmlAnalysis: result.htmlAnalysis,
+      jsAnalysis: result.jsAnalysis,
+      screenshot: result.screenshot,
+      ocrResults: result.ocrResults,
+      cvAnalysis: result.cvAnalysis,
+      threatIntel: result.threatIntel as unknown as Record<string, unknown>[],
+      technologies: result.technologies as unknown as Record<string, unknown>[],
+      malwareIndicators: result.malwareIndicators as unknown as Record<string, unknown>[],
+      aiAnalysis: result.aiAnalysis as unknown as Record<string, unknown>,
+      completedAt,
+      duration,
+      updatedAt: completedAt,
+    };
 
     if (result.aiAnalysis) {
-      scan.riskScore = result.aiAnalysis.riskScore;
-      scan.riskLevel = result.aiAnalysis.riskLevel;
+      updateData.riskScore = result.aiAnalysis.riskScore;
+      updateData.riskLevel = result.aiAnalysis.riskLevel;
     }
 
-    store.addLog("info", `Scan completed: ${url} (risk=${scan.riskScore}, level=${scan.riskLevel})`);
+    await store.updateScan(scan._id, updateData);
 
-    if (scan.riskScore >= 80) {
+    const finalRiskScore = updateData.riskScore ?? 0;
+    const finalRiskLevel = updateData.riskLevel ?? "safe";
+
+    await store.addLog("info", `Scan completed: ${url} (risk=${finalRiskScore}, level=${finalRiskLevel})`);
+
+    if (finalRiskScore >= 80) {
       sendTelegramAlert({
         eventType: "Critical Malware Detected",
         severity: "critical",
         url,
-        riskScore: scan.riskScore,
+        riskScore: finalRiskScore,
         eventId: generateEventId(),
       });
     }
-  }).catch((error) => {
-    scan.status = "failed";
-    scan.completedAt = new Date();
-    scan.duration = Math.round((Date.now() - scan.startedAt.getTime()) / 1000);
-    scan.updatedAt = new Date();
+  }).catch(async (error) => {
+    const completedAt = new Date();
+    const duration = Math.round((Date.now() - scan.startedAt.getTime()) / 1000);
+    await store.updateScan(scan._id, {
+      status: "failed",
+      completedAt,
+      duration,
+      updatedAt: completedAt,
+    });
     const msg = error instanceof Error ? error.message : "Unknown error";
-    store.addLog("error", `Scan failed: ${url} - ${msg}`);
+    await store.addLog("error", `Scan failed: ${url} - ${msg}`);
     sendTelegramAlert({
       eventType: "Scan Pipeline Failed",
       severity: "warning",
@@ -141,11 +153,11 @@ scanRoutes.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 scanRoutes.delete("/:id", async (req: Request, res: Response) => {
-  const idx = store.scans.findIndex((s) => s._id === req.params["id"]);
-  if (idx === -1) {
+  const existing = await store.getScanById(req.params["id"] as string);
+  if (!existing) {
     res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });
     return;
   }
-  store.scans.splice(idx, 1);
+  await store.deleteScan(req.params["id"] as string);
   res.json({ success: true, data: { deleted: true }, error: null, timestamp: new Date().toISOString() });
 });
