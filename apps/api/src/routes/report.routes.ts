@@ -128,7 +128,7 @@ reportRoutes.post("/", requireAuth, asyncHandler(async (req: Request, res: Respo
   });
 }));
 
-reportRoutes.delete("/:id", asyncHandler(async (req: Request, res: Response) => {
+reportRoutes.delete("/:id", requireAuth, asyncHandler(async (req: Request, res: Response) => {
   const existing = await store.getReportById(req.params["id"] as string);
   if (!existing) {
     res.status(404).json({ success: false, data: null, error: "Report not found", timestamp: new Date().toISOString() });

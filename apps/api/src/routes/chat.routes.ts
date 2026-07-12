@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { chatRequestSchema } from "../middleware/validation.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { store } from "../store.js";
 import { buildScanContext } from "../services/ai-analyzer.js";
@@ -7,7 +8,7 @@ import { logger } from "../utils/logger.js";
 
 export const chatRoutes = Router();
 
-chatRoutes.post("/", asyncHandler(async (req: Request, res: Response) => {
+chatRoutes.post("/", requireAuth, asyncHandler(async (req: Request, res: Response) => {
   const parsed = chatRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -55,7 +56,7 @@ Always provide clear, actionable, professional security advice. Use markdown for
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "openrouter/free",
+          model: "meta-llama/llama-3.1-8b-instruct:free",
           messages,
           max_tokens: 2048,
           temperature: 0.7,

@@ -30,7 +30,7 @@ export default function RegisterPage() {
   });
 
   if (isAuthenticated) {
-    router.replace("/");
+    router.replace("/dashboard");
     return null;
   }
 
@@ -55,7 +55,7 @@ export default function RegisterPage() {
     try {
       await register(form);
       toast.success("Account created!", { description: "Welcome to CyberGuard AI." });
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Registration failed";
       toast.error("Registration failed", { description: msg });
@@ -69,7 +69,7 @@ export default function RegisterPage() {
     try {
       await loginWithGoogle();
       toast.success("Welcome!", { description: "Signed in with Google." });
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Google sign-in failed";
       toast.error("Google sign-in failed", { description: msg });

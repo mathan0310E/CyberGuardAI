@@ -51,6 +51,8 @@ export async function sendTelegramAlert(alert: TelegramAlert): Promise<boolean> 
 
   try {
     const message = formatAlert(alert);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -59,7 +61,9 @@ export async function sendTelegramAlert(alert: TelegramAlert): Promise<boolean> 
         text: message,
         parse_mode: "Markdown",
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
 
     if (!res.ok) {
       logger.error(`[TELEGRAM] Failed to send alert: HTTP ${res.status}`);

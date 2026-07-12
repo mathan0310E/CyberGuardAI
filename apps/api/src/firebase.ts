@@ -1,6 +1,8 @@
 import { initializeApp, cert, getApps, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { logger } from "./utils/logger.js";
 
 let app: App | null = null;
@@ -11,6 +13,25 @@ export function initFirebase(): Firestore | null {
   const projectId = process.env["FIREBASE_PROJECT_ID"];
   const clientEmail = process.env["FIREBASE_CLIENT_EMAIL"];
   const privateKey = process.env["FIREBASE_PRIVATE_KEY"];
+
+  // Tier 0: Service account JSON file → Firestore + Auth
+  const saPath = resolve(import.meta.dirname ?? __dirname, "../service-account.json");
+  try {
+    const sa = JSON.parse(readFileSync(saPath, "utf-8"));
+    if (getApps().length === 0) {
+      app = initializeApp({ credential: cert(sa) });
+    } else {
+      app = getApps()[0]!;
+    }
+    if (app) {
+      db = getFirestore(app);
+      adminAuth = getAuth(app);
+      logger.info("Firebase Firestore + Auth connected (service account file)");
+      return db;
+    }
+  } catch {
+    // Fall through to env-based tiers
+  }
 
   // Tier 1: Full Firebase — service account credentials → Firestore + Auth
   if (projectId && clientEmail && privateKey) {

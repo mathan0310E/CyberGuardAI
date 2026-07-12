@@ -162,7 +162,7 @@ scanRoutes.post("/", scanLimiter, requireAuth, asyncHandler(async (req: AuthRequ
   });
 }));
 
-scanRoutes.delete("/:id", asyncHandler(async (req: Request, res: Response) => {
+scanRoutes.delete("/:id", requireAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
   const existing = await store.getScanById(req.params["id"] as string);
   if (!existing) {
     res.status(404).json({ success: false, data: null, error: "Scan not found", timestamp: new Date().toISOString() });

@@ -42,4 +42,5 @@ Thumbs.db
 *serviceAccount*.json
 *credentials*.json
 *firebase-admin*.json
+service-account.json
 secrets/

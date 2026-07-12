@@ -142,7 +142,7 @@ export async function runScanPipeline(
     if (result.malwareIndicators.length === 0) {
       result.aiAnalysis = {
         riskScore: 0,
-        riskLevel: "medium",
+        riskLevel: "low",
         executiveSummary: `Scan failed for ${scan.domain}: ${msg}. The site could not be reached or analyzed.`,
         threatExplanation: `The scan encountered an error: ${msg}`,
         recommendations: ["Verify the URL is accessible", "Check if the site is blocking automated requests", "Try again later"],
