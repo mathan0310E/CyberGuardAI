@@ -1,4 +1,4 @@
-import type { RiskLevel, ScanStatus } from "@cyberguard/types";
+Cimport type { RiskLevel, ScanStatus } from "@cyberguard/types";
 import { getDb } from "../config/firebase.js";
 
 export interface MemoryUser {
@@ -106,7 +106,9 @@ function toFirestoreData(obj: Record<string, unknown>): Record<string, unknown> 
   return data;
 }
 
-function serializeFirestoreValue(value: unknown): unknown {
+function serializeFirestoreValue(
+  value: unknown
+): Record<string, unknown> | unknown {
   if (value === null || value === undefined) return value;
   if (typeof value === "object" && "seconds" in value && "nanoseconds" in value) {
     return new Date((value as FirebaseFirestore.Timestamp).seconds * 1000 + (value as FirebaseFirestore.Timestamp).nanoseconds / 1_000_000).toISOString();
@@ -125,7 +127,14 @@ function serializeFirestoreValue(value: unknown): unknown {
 function fromFirestoreDoc(doc: FirebaseFirestore.DocumentSnapshot): Record<string, unknown> | null {
   if (!doc.exists) return null;
   const data = doc.data()!;
-  return { _id: doc.id, ...serializeFirestoreValue(data) } as Record<string, unknown>;
+  const serialized = serializeFirestoreValue(data);
+
+return {
+  _id: doc.id,
+  ...(typeof serialized === "object" && serialized !== null
+    ? (serialized as Record<string, unknown>)
+    : {}),
+};;
 }
 
 // ── Store ──
