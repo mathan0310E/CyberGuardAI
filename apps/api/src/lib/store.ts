@@ -1,4 +1,4 @@
-Cimport type { RiskLevel, ScanStatus } from "@cyberguard/types";
+import type { RiskLevel, ScanStatus } from "@cyberguard/types";
 import { getDb } from "../config/firebase.js";
 
 export interface MemoryUser {
