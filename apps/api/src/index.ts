@@ -56,27 +56,50 @@ app.use(compression({
   threshold: 1024,
 }));
 
-// ── CORS ──
-const devOrigins = ["http://localhost:3000", "http://localhost:3001"];
-const prodOrigins = process.env["FRONTEND_URL"] ? [process.env["FRONTEND_URL"]] : [];
-const allowedOrigins = isProduction ? prodOrigins : [...devOrigins, ...prodOrigins];
+// ── CORS ──────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://cyber-guard-ai-web.vercel.app",
+  "https://cyber-guard-ai-web-mathan0310e.vercel.app",
+];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      const err = new Error("Not allowed by CORS") as Error & { statusCode: number };
-      err.statusCode = 403;
-      callback(err);
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  maxAge: 86400,
-}));
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow server-to-server requests and tools like Postman
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.error("❌ Blocked by CORS:", origin);
+
+      return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "X-Requested-With",
+    ],
+    exposedHeaders: ["X-Request-Id"],
+    maxAge: 86400,
+  })
+);
+
+// Handle preflight requests
+app.options("*", cors());
 // ── Body Parsing ──
 app.use(express.json({ limit: "1mb" }));
 
