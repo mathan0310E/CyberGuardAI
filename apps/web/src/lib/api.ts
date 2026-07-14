@@ -50,6 +50,10 @@ class ApiClient {
       throw new Error(data.error ?? `HTTP ${res.status}`);
     }
 
+    if (data.data === undefined || data.data === null) {
+      throw new Error("API returned empty response");
+    }
+
     return data.data;
   }
 

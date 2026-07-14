@@ -4,14 +4,14 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { scanRoutes } from "./routes/scan.routes.js";
-import { reportRoutes } from "./routes/report.routes.js";
-import { chatRoutes } from "./routes/chat.routes.js";
-import { dashboardRoutes } from "./routes/dashboard.routes.js";
-import { authRoutes } from "./routes/auth.routes.js";
-import { adminRoutes } from "./routes/admin.routes.js";
+import { scanRoutes } from "./modules/scanner/scanner.routes.js";
+import { reportRoutes } from "./modules/reports/reports.routes.js";
+import { chatRoutes } from "./modules/chat/chat.routes.js";
+import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
+import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
-import { initFirebase, getDb, getAdminAuth } from "./firebase.js";
+import { initFirebase, getDb, getAdminAuth } from "./config/firebase.js";
 import { logger } from "./utils/logger.js";
 
 initFirebase();
@@ -108,6 +108,12 @@ const chatLimiter = rateLimit({
   message: { success: false, data: null, error: "Chat rate limit exceeded. Maximum 20 messages per minute.", timestamp: new Date().toISOString() },
 });
 
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { success: false, data: null, error: "Admin rate limit exceeded. Please try again later.", timestamp: new Date().toISOString() },
+});
+
 app.use("/api/", globalLimiter);
 
 // ── Health Check (no rate limit) ──
@@ -129,7 +135,7 @@ app.use("/api/scans", scanRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/chat", chatLimiter, chatRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminLimiter, adminRoutes);
 
 // ── 404 Handler ──
 app.use((_req, res) => {

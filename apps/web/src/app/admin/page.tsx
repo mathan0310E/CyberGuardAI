@@ -8,9 +8,9 @@ import {
   Users, Shield, Activity, AlertTriangle, Loader2, CheckCircle, Clock, Ban,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/features/auth/auth-context";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, asArray, safeToLocaleString } from "@/lib/utils";
 
 interface AdminUser {
   _id: string;
@@ -40,6 +40,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"users" | "analytics" | "logs">("users");
 
   useEffect(() => {
@@ -53,10 +54,19 @@ export default function AdminPage() {
 
     Promise.all([api.getAdminUsers(), api.getAdminStats()])
       .then(([usersData, statsData]) => {
-        setUsers(usersData as unknown as AdminUser[]);
-        setStats(statsData as unknown as AdminStats);
+        setUsers(asArray<AdminUser>(usersData));
+        const raw = statsData as unknown as Record<string, unknown>;
+        setStats({
+          totalScans: Number(raw["totalScans"]) || 0,
+          completedScans: Number(raw["completedScans"]) || 0,
+          malwareDetected: Number(raw["malwareDetected"]) || 0,
+          totalUsers: Number(raw["totalUsers"]) || 0,
+          activeUsers: Number(raw["activeUsers"]) || 0,
+          totalReports: Number(raw["totalReports"]) || 0,
+          logs: asArray(raw["logs"]),
+        });
       })
-      .catch(() => {})
+      .catch(() => setError("Failed to load admin data."))
       .finally(() => setLoading(false));
   }, [isAdmin]);
 
@@ -74,6 +84,16 @@ export default function AdminPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertTriangle className="h-12 w-12 text-warning" />
+        <p className="text-text text-center">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary/80 transition-colors">Retry</button>
       </div>
     );
   }
@@ -245,7 +265,7 @@ export default function AdminPage() {
                 )} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-text">{log.message}</p>
-                  <p className="text-xs text-muted">{new Date(log.timestamp).toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                  <p className="text-xs text-muted">{safeToLocaleString(log.timestamp, "Unknown", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
                 <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
                   log.level === "error" ? "bg-danger/20 text-danger" : log.level === "warn" ? "bg-warning/20 text-warning" : "bg-success/20 text-success"

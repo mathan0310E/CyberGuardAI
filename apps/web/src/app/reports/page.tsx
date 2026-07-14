@@ -18,7 +18,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { RISK_COLORS, RISK_LABELS } from "@cyberguard/shared";
 import { api } from "@/lib/api";
 import type { RiskLevel } from "@cyberguard/types";
-import { cn } from "@/lib/utils";
+import { cn, asArray, safeToLocaleDateString } from "@/lib/utils";
 
 interface Report {
   _id: string;
@@ -43,20 +43,38 @@ const SEVERITY_ICONS = {
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterLevel, setFilterLevel] = useState<RiskLevel | "all">("all");
 
   useEffect(() => {
     api.listReports()
-      .then((result) => setReports(result.data as unknown as Report[]))
-      .catch(() => {})
+      .then((result) => setReports(asArray<Report>(result?.data)))
+      .catch(() => setError("Failed to load reports."))
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDownload = useCallback((report: Report) => {
+  const handleDownload = useCallback(async (report: Report) => {
     const url = api.getReportDownloadUrl(report._id);
-    window.open(url, "_blank");
-    toast.success("Downloading report", { description: `PDF for ${report.domain}` });
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Download failed: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `CyberGuard-Report-${report.domain}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast.success("PDF downloaded", { description: `Report for ${report.domain}` });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Download failed";
+      toast.error("Download failed", { description: msg });
+    }
   }, []);
 
   const handleDelete = useCallback(async (report: Report) => {
@@ -69,11 +87,11 @@ export default function ReportsPage() {
     }
   }, []);
 
-  const filtered = reports.filter((r) => {
+  const filtered = (reports ?? []).filter((r) => {
     const matchesSearch =
       !searchQuery ||
-      r.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.url.toLowerCase().includes(searchQuery.toLowerCase());
+      (r.domain ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.url ?? "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterLevel === "all" || r.riskLevel === filterLevel;
     return matchesSearch && matchesFilter;
   });
@@ -82,6 +100,16 @@ export default function ReportsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertTriangle className="h-12 w-12 text-warning" />
+        <p className="text-text text-center">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary/80 transition-colors">Retry</button>
       </div>
     );
   }
@@ -162,7 +190,7 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {new Date(report.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                      {safeToLocaleDateString(report.generatedAt, "Unknown", { year: "numeric", month: "short", day: "numeric" })}
                     </span>
                     <span className="flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" />

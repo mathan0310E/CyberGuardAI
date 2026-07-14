@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
-import { getAdminAuth } from "../firebase.js";
-import { store } from "../store.js";
+import { getAdminAuth } from "../config/firebase.js";
+import { store } from "../lib/store.js";
 
 export interface AuthRequest extends Request {
   userId?: string;

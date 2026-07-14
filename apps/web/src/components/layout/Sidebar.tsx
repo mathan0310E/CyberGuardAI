@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Shield,
@@ -34,7 +34,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/features/auth/auth-context";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -69,6 +69,7 @@ const BOTTOM_LINKS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
@@ -171,7 +172,7 @@ export function Sidebar() {
               <p className="text-xs text-muted truncate">{user?.companyName}</p>
             </div>
             <button
-              onClick={() => { logout(); setMobileOpen(false); }}
+              onClick={() => { logout(); setMobileOpen(false); router.replace("/auth/login"); }}
               className="shrink-0 p-2 rounded-xl text-muted hover:text-danger hover:bg-danger/10 transition-colors"
               title="Sign out"
             >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -8,12 +8,12 @@ import { toast } from "sonner";
 import { Shield, User, Mail, Lock, Building, Globe, Phone, Users, Briefcase, Eye, EyeOff, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlowButton } from "@/components/ui/GlowButton";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/features/auth/auth-context";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, loginWithGoogle, isAuthenticated } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { register, loginWithGoogle, isAuthenticated, isLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -29,10 +29,11 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
 
-  if (isAuthenticated) {
-    router.replace("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -51,7 +52,7 @@ export default function RegisterPage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       await register(form);
       toast.success("Account created!", { description: "Welcome to CyberGuard AI." });
@@ -60,7 +61,7 @@ export default function RegisterPage() {
       const msg = error instanceof Error ? error.message : "Registration failed";
       toast.error("Registration failed", { description: msg });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -94,7 +95,7 @@ export default function RegisterPage() {
             variant="secondary"
             className="w-full"
             onClick={handleGoogleRegister}
-            disabled={isGoogleLoading || isLoading}
+            disabled={isGoogleLoading || isSubmitting}
           >
             {isGoogleLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -218,8 +219,8 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <GlowButton type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
+            <GlowButton type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
             </GlowButton>
           </form>
 

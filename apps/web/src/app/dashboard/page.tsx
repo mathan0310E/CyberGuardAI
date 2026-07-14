@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -20,7 +21,9 @@ import { RiskGauge } from "@/components/ui/RiskGauge";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { THREAT_CATEGORY_LABELS, RISK_COLORS } from "@cyberguard/shared";
 import { api } from "@/lib/api";
+import { useAuth } from "@/features/auth/auth-context";
 import type { RiskLevel } from "@cyberguard/types";
+import { asArray } from "@/lib/utils";
 import {
   BarChart,
   Bar,
@@ -62,20 +65,60 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/auth/login");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
     api.getDashboardStats()
-      .then((stats) => setData(stats as unknown as DashboardData))
-      .catch(() => {})
+      .then((stats) => {
+        const raw = stats as unknown as Record<string, unknown>;
+        setData({
+          totalScans: Number(raw["totalScans"]) || 0,
+          completedScans: Number(raw["completedScans"]) || 0,
+          malwareDetected: Number(raw["malwareDetected"]) || 0,
+          cleanSites: Number(raw["cleanSites"]) || 0,
+          averageRiskScore: Number(raw["averageRiskScore"]) || 0,
+          recentScans: asArray(raw["recentScans"]),
+          threatDistribution: asArray(raw["threatDistribution"]),
+          riskOverTime: asArray(raw["riskOverTime"]),
+        });
+      })
+      .catch(() => setError("Failed to load dashboard data."))
       .finally(() => setLoading(false));
   }, []);
+
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertTriangle className="h-12 w-12 text-warning" />
+        <p className="text-text text-center">{error}</p>
+        <GlowButton onClick={() => window.location.reload()}>Retry</GlowButton>
       </div>
     );
   }
@@ -91,7 +134,7 @@ export default function DashboardPage() {
     stats.averageRiskScore >= 20 ? "low" : "safe";
 
   const chartData = stats.riskOverTime.length > 0
-    ? stats.riskOverTime.map((e) => ({ name: e.date.slice(5), value: e.averageScore }))
+    ? stats.riskOverTime.map((e) => ({ name: String(e.date ?? "").slice(5), value: e.averageScore || 0 }))
     : [
         { name: "Mon", value: 0 }, { name: "Tue", value: 0 }, { name: "Wed", value: 0 },
         { name: "Thu", value: 0 }, { name: "Fri", value: 0 }, { name: "Sat", value: 0 }, { name: "Sun", value: 0 },
@@ -203,7 +246,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <span className="text-xs text-muted hidden sm:block">
-                        {scan.malwareIndicators.length} threat{scan.malwareIndicators.length !== 1 ? "s" : ""}
+                        {(scan.malwareIndicators?.length ?? 0)} threat{(scan.malwareIndicators?.length ?? 0) !== 1 ? "s" : ""}
                       </span>
                       <span
                         className="text-sm font-bold"

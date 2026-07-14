@@ -8,7 +8,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { RISK_COLORS } from "@cyberguard/shared";
 import { api } from "@/lib/api";
 import type { RiskLevel } from "@cyberguard/types";
-import { formatDistanceToNow } from "date-fns";
+import { asArray, safeFormatDistanceToNow } from "@/lib/utils";
 
 export default function HistoryPage() {
   const [scans, setScans] = useState<Array<{
@@ -23,23 +23,34 @@ export default function HistoryPage() {
     malwareIndicators: unknown[];
   }>>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     api.listScans(1, 100)
-      .then((result) => setScans(result.data as unknown as typeof scans))
-      .catch(() => {})
+      .then((result) => setScans(asArray<typeof scans[number]>(result?.data)))
+      .catch(() => setError("Failed to load scan history."))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = scans.filter((s) =>
-    !search || s.domain.toLowerCase().includes(search.toLowerCase()) || s.url.toLowerCase().includes(search.toLowerCase())
+  const filtered = (scans ?? []).filter((s) =>
+    !search || (s.domain ?? "").toLowerCase().includes(search.toLowerCase()) || (s.url ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertTriangle className="h-12 w-12 text-warning" />
+        <p className="text-text text-center">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary/80 transition-colors">Retry</button>
       </div>
     );
   }
@@ -93,7 +104,7 @@ export default function HistoryPage() {
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="text-xs text-muted hidden sm:flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {formatDistanceToNow(new Date(scan.startedAt), { addSuffix: true })}
+                    {safeFormatDistanceToNow(scan.startedAt)}
                   </span>
                   <span className="text-xs text-muted hidden sm:block">
                     {scan.malwareIndicators.length} threats

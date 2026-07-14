@@ -25,11 +25,11 @@ interface Message {
 }
 
 const SUGGESTED_PROMPTS = [
-  "Explain the hidden iframe threat found on the scanned site",
-  "What are the best practices to prevent crypto mining scripts?",
-  "How do I remediate obfuscated JavaScript?",
-  "Generate a summary of the latest scan results",
-  "Compare security headers between two websites",
+  "What is phishing and how do I detect it?",
+  "How do I secure my website against attacks?",
+  "Explain SQL injection in simple terms",
+  "What is OWASP Top 10?",
+  "How do I prevent XSS vulnerabilities?",
 ];
 
 function ChatContent() {
@@ -40,7 +40,7 @@ function ChatContent() {
     {
       id: "welcome",
       role: "assistant",
-      content: `Hello! I'm **CyberGuard AI Assistant**. I can help you understand scan results, explain threats, and provide remediation guidance.\n\n${scanId ? `I see you're asking about a specific scan. I'll use that context for my answers.` : "Ask me anything about website security, malware detection, or threat analysis."}`,
+      content: `Hello! I'm **CyberGuard AI Copilot** — your AI-powered cybersecurity assistant.\n\nI can help you with:\n\n- **Website Security** — analyze sites for vulnerabilities and threats\n- **Malware Detection** — understand different types of malware\n- **Vulnerability Assessment** — SQL injection, XSS, CSRF, and more\n- **Threat Intelligence** — CVEs, threat actors, and attack patterns\n- **Security Best Practices** — hardening, headers, CSP, and compliance\n${scanId ? "\nI see you're asking about a specific scan. I'll use that context for my answers." : "\nAsk me anything about cybersecurity — I'm here to help!"}`,
       timestamp: "2026-01-11T12:00:00.000Z",
     },
   ]);
@@ -87,15 +87,19 @@ function ChatContent() {
           }))
         );
 
-        setConversationId(result.conversationId);
+        if (result?.conversationId) setConversationId(result.conversationId);
 
-        const assistantMessage: Message = {
-          id: result.message.id,
-          role: "assistant",
-          content: result.message.content,
-          timestamp: result.message.timestamp,
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+        if (result?.message?.id) {
+          const assistantMessage: Message = {
+            id: result.message.id,
+            role: "assistant",
+            content: result.message.content ?? "I couldn't generate a response.",
+            timestamp: result.message.timestamp ?? new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+        } else {
+          throw new Error("Invalid response from AI");
+        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : "Failed to get response";
         toast.error("AI response failed", { description: msg });
@@ -124,9 +128,9 @@ function ChatContent() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
         <h1 className="text-2xl font-bold text-text flex items-center gap-2">
           <Sparkles className="h-6 w-6 text-primary" />
-          AI Security Assistant
+          AI Security Copilot
         </h1>
-        <p className="text-sm text-muted">Ask about scan results, threats, or security best practices</p>
+        <p className="text-sm text-muted">Ask about threats, vulnerabilities, security best practices, or scan results</p>
         {scanId && (
           <p className="text-xs text-accent mt-1">Context: Scan {scanId}</p>
         )}

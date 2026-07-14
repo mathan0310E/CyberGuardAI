@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      firebase:
+        specifier: ^12.16.0
+        version: 12.16.0
 
   apps/api:
     dependencies:

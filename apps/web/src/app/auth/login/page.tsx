@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -8,27 +8,28 @@ import { toast } from "sonner";
 import { Shield, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlowButton } from "@/components/ui/GlowButton";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/features/auth/auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  if (isAuthenticated) {
-    router.replace("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       await login(email, password);
       toast.success("Welcome back!", { description: "You have been logged in successfully." });
@@ -37,7 +38,7 @@ export default function LoginPage() {
       const msg = error instanceof Error ? error.message : "Login failed";
       toast.error("Login failed", { description: msg });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -71,7 +72,7 @@ export default function LoginPage() {
             variant="secondary"
             className="w-full"
             onClick={handleGoogleLogin}
-            disabled={isGoogleLoading || isLoading}
+            disabled={isGoogleLoading || isSubmitting}
           >
             {isGoogleLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -133,8 +134,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <GlowButton type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
+            <GlowButton type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
             </GlowButton>
           </form>
 

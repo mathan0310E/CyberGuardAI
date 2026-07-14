@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+// @ts-ignore
 import "./globals.css";
 import { AnimatedBackground } from "@/components/effects/AnimatedBackground";
 import { CyberGrid } from "@/components/effects/CyberGrid";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider } from "@/features/auth/auth-context";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 
 export const metadata: Metadata = {

@@ -23,7 +23,7 @@ import { ThreatCard } from "@/components/ui/ThreatCard";
 import { ProgressTimeline } from "@/components/ui/ProgressTimeline";
 import { SCAN_STATUS_LABELS } from "@cyberguard/shared";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/features/auth/auth-context";
 import type { ScanStatus, RiskLevel, MalwareIndicator } from "@cyberguard/types";
 import {
   BarChart,
@@ -96,7 +96,21 @@ export default function ScannerPage() {
     setScanResult(null);
 
     try {
-      const scan = await api.createScan(targetUrl) as unknown as ScanResult;
+      const raw = await api.createScan(targetUrl);
+      const scan: ScanResult = {
+        _id: String((raw as Record<string, unknown>)["_id"] ?? ""),
+        url: String((raw as Record<string, unknown>)["url"] ?? targetUrl),
+        domain: String((raw as Record<string, unknown>)["domain"] ?? ""),
+        riskScore: Number((raw as Record<string, unknown>)["riskScore"]) || 0,
+        riskLevel: (String((raw as Record<string, unknown>)["riskLevel"]) || "safe") as RiskLevel,
+        status: (String((raw as Record<string, unknown>)["status"]) || "pending") as ScanStatus,
+        malwareIndicators: Array.isArray((raw as Record<string, unknown>)["malwareIndicators"]) ? (raw as Record<string, unknown>)["malwareIndicators"] as MalwareIndicator[] : [],
+        jsAnalysis: ((raw as Record<string, unknown>)["jsAnalysis"] as Record<string, unknown>) ?? null,
+        htmlAnalysis: ((raw as Record<string, unknown>)["htmlAnalysis"] as Record<string, unknown>) ?? null,
+        threatIntel: Array.isArray((raw as Record<string, unknown>)["threatIntel"]) ? (raw as Record<string, unknown>)["threatIntel"] as Record<string, unknown>[] : [],
+        technologies: Array.isArray((raw as Record<string, unknown>)["technologies"]) ? (raw as Record<string, unknown>)["technologies"] as Record<string, unknown>[] : [],
+        aiAnalysis: ((raw as Record<string, unknown>)["aiAnalysis"] as Record<string, unknown>) ?? null,
+      };
       setScanResult(scan);
       toast.success("Scan started", { description: `Analyzing ${targetUrl}` });
     } catch (error) {
@@ -112,16 +126,32 @@ export default function ScannerPage() {
     if (currentStep >= SCAN_STEPS.length) {
       const pollInterval = setInterval(async () => {
         try {
-          const updated = await api.getScan(scanResult._id) as unknown as ScanResult;
-          if (updated.status === "completed" || updated.status === "failed") {
-            setScanResult(updated);
+          const raw = await api.getScan(scanResult._id) as Record<string, unknown>;
+          const status = String(raw["status"] ?? "pending") as ScanStatus;
+          if (status === "completed" || status === "failed") {
+            setScanResult({
+              _id: String(raw["_id"] ?? scanResult._id),
+              url: String(raw["url"] ?? scanResult.url),
+              domain: String(raw["domain"] ?? scanResult.domain),
+              riskScore: Number(raw["riskScore"]) || 0,
+              riskLevel: (String(raw["riskLevel"]) || "safe") as RiskLevel,
+              status,
+              malwareIndicators: Array.isArray(raw["malwareIndicators"]) ? raw["malwareIndicators"] as MalwareIndicator[] : [],
+              jsAnalysis: (raw["jsAnalysis"] as Record<string, unknown>) ?? null,
+              htmlAnalysis: (raw["htmlAnalysis"] as Record<string, unknown>) ?? null,
+              threatIntel: Array.isArray(raw["threatIntel"]) ? raw["threatIntel"] as Record<string, unknown>[] : [],
+              technologies: Array.isArray(raw["technologies"]) ? raw["technologies"] as Record<string, unknown>[] : [],
+              aiAnalysis: (raw["aiAnalysis"] as Record<string, unknown>) ?? null,
+            });
             setIsScanning(false);
             setShowResults(true);
             setScanProgress(100);
             clearInterval(pollInterval);
-            if (updated.status === "completed") {
+            const riskScore = Number(raw["riskScore"]) || 0;
+            const riskLevel = (String(raw["riskLevel"]) || "safe") as RiskLevel;
+            if (status === "completed") {
               toast.success("Scan complete", {
-                description: `Risk score: ${updated.riskScore}/100 (${updated.riskLevel})`,
+                description: `Risk score: ${riskScore}/100 (${riskLevel})`,
               });
             } else {
               toast.error("Scan failed", { description: "The scan encountered an error." });
@@ -148,9 +178,11 @@ export default function ScannerPage() {
     if (!scanResult?._id) return;
     setIsGeneratingReport(true);
     try {
-      const report = await api.createReport(scanResult._id);
+      const report = await api.createReport(scanResult._id) as Record<string, unknown> | null;
+      const reportId = String(report?.["_id"] ?? "");
+      if (!reportId) throw new Error("Report creation returned no ID");
       toast.success("Report generated", { description: "Your PDF report is ready." });
-      const downloadUrl = api.getReportDownloadUrl((report as unknown as { _id: string })._id);
+      const downloadUrl = api.getReportDownloadUrl(reportId);
       window.open(downloadUrl, "_blank");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Failed to generate report";
